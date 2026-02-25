@@ -358,18 +358,28 @@ class CreateListingModal {
 
     try {
       var token = localStorage.getItem('access_token');
+      if (!token) {
+        window.location.href = '/login/?next=' + encodeURIComponent(window.location.pathname);
+        return;
+      }
+
       var response = await fetch('/apartments/api/apartments/', {
         method:  'POST',
         headers: {
           'Content-Type':  'application/json',
           'X-CSRFToken':   _getCsrfToken(),
-          'Authorization': token ? ('Bearer ' + token) : '',
+          'Authorization': 'Bearer ' + token,
         },
         credentials: 'include',
         body: JSON.stringify(body),
       });
 
       if (!response.ok) {
+        if (response.status === 401) {
+          localStorage.removeItem('access_token');
+          window.location.href = '/login/?next=' + encodeURIComponent(window.location.pathname);
+          return;
+        }
         var errData = await response.json().catch(function() { return {}; });
         var msg = this._formatApiError(errData) || ('HTTP ' + response.status);
         throw new Error(msg);
