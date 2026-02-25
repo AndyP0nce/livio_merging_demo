@@ -172,7 +172,9 @@ function recomputeDistances(targetUni) {
 function fetchListings() {
   var url = '/apartments/api/apartments/';
   log('Fetching listings from', url);
-  return fetch(url, { credentials: 'include' })
+  var token   = localStorage.getItem('access_token');
+  var headers = token ? { 'Authorization': 'Bearer ' + token } : {};
+  return fetch(url, { credentials: 'include', headers: headers })
     .then(function(response) {
       if (!response.ok) throw new Error('HTTP ' + response.status);
       return response.json();
