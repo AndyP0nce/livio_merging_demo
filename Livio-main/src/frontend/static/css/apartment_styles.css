@@ -12,7 +12,7 @@
   height: calc(100vh - var(--top-spacing, 170px));
   margin: 0 12px;
   overflow: hidden;
-  background: #f7f7f7;
+  background: transparent;
 }
 
 /* "+ List Your Place" button in the sidebar header */
