@@ -9,12 +9,10 @@
  */
 .apt-app-layout {
   display: flex;
-  /* Fill the viewport, minus header/search bar, minus top+bottom margins */
-  height: calc(100vh - var(--top-spacing, 170px) - 10px);
-  margin: 5px;
-  gap: 6px;
-  overflow: visible;
-  background: transparent;
+  height: calc(100vh - var(--top-spacing, 170px));
+  margin: 0 12px;
+  overflow: hidden;
+  background: #f7f7f7;
 }
 
 /* "+ List Your Place" button in the sidebar header */

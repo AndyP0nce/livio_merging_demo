@@ -8,11 +8,10 @@
 
 /* ── Sidebar panel ──────────────────────────────────── */
 .listings-panel {
-  flex: 0 0 20%;
-  min-width: 220px;
-  max-width: 320px;
+  width: 420px;
+  min-width: 340px;
   background: #ffffff;
-  border-radius: 12px;
+  border-right: 1px solid #e0e0e0;
   display: flex;
   flex-direction: column;
   overflow: hidden;
