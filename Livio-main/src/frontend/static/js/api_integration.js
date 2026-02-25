@@ -13,25 +13,71 @@
 
 let favoritedApartments = new Set();
 
+// ── JWT token helpers ──────────────────────────────────
+
+/**
+ * Returns a valid access token, refreshing it first if expired.
+ * Returns null if the user is not logged in or the refresh fails.
+ */
+async function getValidAccessToken() {
+  const accessToken = localStorage.getItem('access_token');
+  if (!accessToken) return null;
+
+  // Decode the JWT payload and check expiry (no library needed — JWTs are base64)
+  try {
+    const payload = JSON.parse(atob(accessToken.split('.')[1]));
+    const nowSec = Math.floor(Date.now() / 1000);
+    if (payload.exp > nowSec) return accessToken;   // still valid
+  } catch (_) {
+    // malformed token — fall through to refresh attempt
+  }
+
+  // Token expired: try refreshing
+  const refreshToken = localStorage.getItem('refresh_token');
+  if (!refreshToken) return null;
+
+  try {
+    const res = await fetch('/api/token/refresh/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refresh: refreshToken }),
+    });
+
+    if (!res.ok) {
+      // Refresh token is also expired / invalid — clear storage
+      localStorage.removeItem('access_token');
+      localStorage.removeItem('refresh_token');
+      return null;
+    }
+
+    const data = await res.json();
+    localStorage.setItem('access_token', data.access);
+    return data.access;
+  } catch (_) {
+    return null;
+  }
+}
+
 // ── Favorites ─────────────────────────────────────────
 
 async function toggleFavorite(apartmentId) {
   try {
-    const response = await fetch('/apartments/api/favorites/toggle/', {
-      method: 'POST',
-      credentials: 'include',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-CSRFToken': LivioUtils.getCsrfToken(),
-      },
-      body: JSON.stringify({ apartment_id: apartmentId }),
-    });
+    const token = await getValidAccessToken();
 
-    // Not logged in → redirect to login page
-    if (response.status === 401) {
+    if (!token) {
+      // Not logged in (or session fully expired) → send to login
       window.location.href = '/login/?next=' + encodeURIComponent(window.location.pathname);
       return;
     }
+
+    const response = await fetch('/apartments/api/favorites/toggle/', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + token,
+      },
+      body: JSON.stringify({ apartment_id: apartmentId }),
+    });
 
     if (!response.ok) throw new Error('Failed to toggle favorite');
 
@@ -60,17 +106,19 @@ async function checkFavoriteStatus() {
     const ids = AppState.listings.map((l) => l.id);
     if (ids.length === 0) return;
 
+    const token = await getValidAccessToken();
+
+    // Build headers — include Authorization only when a valid token exists
+    const headers = { 'Content-Type': 'application/json' };
+    if (token) headers['Authorization'] = 'Bearer ' + token;
+
     const response = await fetch('/apartments/api/favorites/check/', {
       method: 'POST',
-      credentials: 'include',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-CSRFToken': LivioUtils.getCsrfToken(),
-      },
+      headers,
       body: JSON.stringify({ apartment_ids: ids }),
     });
 
-    if (!response.ok) return;
+    if (!response.ok) return;   // not logged in or server error — silently skip
 
     const status = await response.json();
     favoritedApartments = new Set(
