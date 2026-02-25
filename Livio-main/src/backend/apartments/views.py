@@ -318,26 +318,34 @@ class CheckFavoriteStatusAPI(APIView):
         {"123": true, "124": false, "125": true}
     """
     
-    permission_classes = [IsAuthenticated]
-    
+    permission_classes = [AllowAny]
+
     def post(self, request):
+        # Guest users have no favorites — return all-false immediately
+        if not request.user.is_authenticated:
+            apartment_ids = request.data.get('apartment_ids', [])
+            return Response(
+                {str(apt_id): False for apt_id in apartment_ids},
+                status=status.HTTP_200_OK
+            )
+
         apartment_ids = request.data.get('apartment_ids', [])
-        
+
         if not apartment_ids:
             return Response({}, status=status.HTTP_200_OK)
-        
+
         # Get favorited apartment IDs
         favorited_ids = FavoriteApartment.objects.filter(
             user=request.user,
             apartment_id__in=apartment_ids
         ).values_list('apartment_id', flat=True)
-        
+
         # Build response dict
         result = {
             str(apt_id): apt_id in favorited_ids
             for apt_id in apartment_ids
         }
-        
+
         return Response(result, status=status.HTTP_200_OK)
 
 
