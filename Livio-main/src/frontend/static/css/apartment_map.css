@@ -8,11 +8,13 @@
 
 /* ── Map panel (right side of apt-app-layout) ──────── */
 .map-panel {
-  flex: 1;
+  flex: 0 0 70%;
   position: relative;
   min-width: 0;
   display: flex;
   flex-direction: column;
+  border-radius: 12px;
+  overflow: hidden;
 }
 
 .map-panel__map {

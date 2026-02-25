@@ -9,11 +9,12 @@
  */
 .apt-app-layout {
   display: flex;
-  /* Fill the viewport space that isn't taken by the fixed header + search */
-  height: calc(100vh - var(--top-spacing, 170px));
-  overflow: hidden;
-  /* Reset the dark body background for the clean Zillow-style panel */
-  background: #f7f7f7;
+  /* Fill the viewport, minus header/search bar, minus top+bottom margins */
+  height: calc(100vh - var(--top-spacing, 170px) - 10px);
+  margin: 5px;
+  gap: 6px;
+  overflow: visible;
+  background: transparent;
 }
 
 /* "+ List Your Place" button in the sidebar header */
