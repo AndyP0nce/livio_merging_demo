@@ -183,13 +183,13 @@ class ApartmentPost(models.Model):
             return []
         return [a.strip() for a in self.amenities.split(',')]
     
-    def get_bedrooms_display(self):
-        """Return formatted bedroom count."""
-        return self.get_bedrooms_display()
-    
-    def get_bathrooms_display(self):
-        """Return formatted bathroom count."""
-        return self.get_bathrooms_display()
+    def get_bedrooms_label(self):
+        """Return formatted bedroom count label."""
+        return dict(self._meta.get_field('bedrooms').choices).get(self.bedrooms, self.bedrooms)
+
+    def get_bathrooms_label(self):
+        """Return formatted bathroom count label."""
+        return dict(self._meta.get_field('bathrooms').choices).get(self.bathrooms, self.bathrooms)
 
 
 class University(models.Model):
