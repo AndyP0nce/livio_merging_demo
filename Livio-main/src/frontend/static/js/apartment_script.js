@@ -289,7 +289,13 @@ function wireEvents() {
   // "+ List Your Place" button
   var listBtn = document.getElementById('btn-list-place');
   if (listBtn) {
-    listBtn.addEventListener('click', function() { createModal.open(); });
+    listBtn.addEventListener('click', function() {
+      if (!localStorage.getItem('access_token')) {
+        window.location.href = '/login/?next=' + encodeURIComponent(window.location.pathname);
+        return;
+      }
+      createModal.open();
+    });
   }
 
   // New listing created → normalize + add to map + refresh
