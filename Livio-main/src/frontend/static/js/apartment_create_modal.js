@@ -357,11 +357,13 @@ class CreateListingModal {
     if (sqft !== null) body.square_feet = sqft;
 
     try {
+      var token = localStorage.getItem('access_token');
       var response = await fetch('/apartments/api/apartments/', {
         method:  'POST',
         headers: {
-          'Content-Type': 'application/json',
-          'X-CSRFToken':  _getCsrfToken(),
+          'Content-Type':  'application/json',
+          'X-CSRFToken':   _getCsrfToken(),
+          'Authorization': token ? ('Bearer ' + token) : '',
         },
         credentials: 'include',
         body: JSON.stringify(body),
