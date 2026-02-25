@@ -1,0 +1,59 @@
+{% extends "base_home.html" %}
+{% load static %}
+{% block content %}
+<link rel="stylesheet" href="{% static 'css/profilePage.css' %}" />
+
+<div class="background">
+  <img src="{% static 'images/SignUpBackground.png' %}" alt="" aria-hidden="true" />
+</div>
+
+
+    <main>
+        <div id="main_profile_page"> <!--This is the div that is for the whole page-->
+            <div id="picture_welcome" class="page_background">
+                <div class="picture_header"> <!--This is the div for the welcome message and profile image-->
+                    <img id="profile_image" src=""> <!--Profile Image-->
+                    <h1 id="welcome_message"></h1>
+                </div>
+            </div>
+            
+            <div id="roommate_insights" class="page_background">
+                <h2 id="roommate_title">Roommate Post Insights</h2>
+                <div id="roommate_post_insights">
+                        <div id="interestedInYou">
+                            <span id="interestedInYouNumber"><span>
+                        </div>
+                        <div id="yourInterestedIn">
+                            <span id="yourInterestedInNumber"></span>
+                        </div>
+                </div>
+            </div>
+            <div id="edit" class="page_background">
+                <div id="edit_profile">
+                    <div style="display: flex; justify-content: center; align-items: center;">
+                        <h2>Edit Profile</h2>
+                    </div>
+                    <div style="display: flex; justify-content: end; align-items: center; margin-right: 15px; margin-bottom: 15px;">
+                        <button id="editProfileButton">Edit</button>
+                    </div>
+                    <div style="display: flex; justify-content: center; align-items: center;">
+                        <form id="editProfileForm"></form>
+                    </div>
+                </div>
+            </div>
+            <div id="summary" class="page_background">
+                <div style="display: flex; justify-content: center; align-items: center;">
+                    <h2>Account Summary</h2>
+                </div>
+                <div id="account_summary">
+                </div>
+            </div>
+            <div id="log_out">
+                <button id="log_out_button">Log Out</button>
+            </div>
+        </div>
+    </main>
+    <script src="{% static 'js/profile_page.js' %}"></script>
+
+
+{% endblock %}

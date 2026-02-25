@@ -1,0 +1,225 @@
+{% extends "base_home.html" %}
+{% load static %}
+{% block content %}
+<link rel="stylesheet" href="{% static 'css/marketplace.css' %}">
+
+<!-- Background only for page body -->
+<div class="mk-background" aria-hidden="true">
+  <img src="{% static 'images/bg2.jpg' %}" alt="" />
+</div>
+
+<div class="mk-page-container">
+  <main class="mk-main">
+    <!-- Filter Bar - Matches apartment/roommates page style -->
+    <section class="mk-filter-bar">
+      <div class="mk-filter-group-left">
+        <div class="mk-filter-label"><i class="fa-solid fa-sliders"></i> Filters:</div>
+
+        <!-- Search Input -->
+        <div class="mk-search-wrap">
+          <input type="text" class="mk-search-input" id="mkSearchInput" placeholder="Search for items..." />
+          <button class="mk-search-btn" title="Search"><i class="fa-solid fa-magnifying-glass"></i></button>
+        </div>
+
+        <!-- Category Dropdown -->
+        <div class="mk-dropdown" id="categoryDropdown">
+          <button class="mk-dropdown-btn" type="button" onclick="toggleMkDropdown('categoryDropdown')">
+            Category <i class="fa-solid fa-chevron-down"></i>
+          </button>
+          <div class="mk-dropdown-content" id="categoryFilter">
+            <label><input type="checkbox" data-filter="Electronics & Media" /> Electronics & Media</label>
+            <label><input type="checkbox" data-filter="Home & Garden" /> Home & Garden</label>
+            <label><input type="checkbox" data-filter="Clothing, Shoes, & Accessories" /> Clothing & Accessories</label>
+            <label><input type="checkbox" data-filter="Baby & Kids" /> Baby & Kids</label>
+            <label><input type="checkbox" data-filter="Vehicles" /> Vehicles</label>
+            <label><input type="checkbox" data-filter="Toys, Games, & Hobbies" /> Toys & Hobbies</label>
+            <label><input type="checkbox" data-filter="Sports & Outdoors" /> Sports & Outdoors</label>
+            <label><input type="checkbox" data-filter="Collectibles & Art" /> Collectibles & Art</label>
+            <label><input type="checkbox" data-filter="Pet supplies" /> Pet Supplies</label>
+            <label><input type="checkbox" data-filter="Health & Beauty" /> Health & Beauty</label>
+            <label><input type="checkbox" data-filter="Business equipment" /> Business Equipment</label>
+            <label><input type="checkbox" data-filter="Tickets" /> Tickets</label>
+            <label><input type="checkbox" data-filter="General (other)" /> General (Other)</label>
+          </div>
+        </div>
+
+        <!-- Condition Dropdown -->
+        <div class="mk-dropdown" id="conditionDropdown">
+          <button class="mk-dropdown-btn" type="button" onclick="toggleMkDropdown('conditionDropdown')">
+            Condition <i class="fa-solid fa-chevron-down"></i>
+          </button>
+          <div class="mk-dropdown-content" id="conditionFilter">
+            <label><input type="checkbox" data-filter="New" /> New</label>
+            <label><input type="checkbox" data-filter="Used - Like New" /> Used - Like New</label>
+            <label><input type="checkbox" data-filter="Used - Good" /> Used - Good</label>
+            <label><input type="checkbox" data-filter="Used - Fair" /> Used - Fair</label>
+          </div>
+        </div>
+
+        <!-- Price Dropdown -->
+        <div class="mk-dropdown" id="priceDropdown">
+          <button class="mk-dropdown-btn" type="button" onclick="toggleMkDropdown('priceDropdown')">
+            Price <i class="fa-solid fa-chevron-down"></i>
+          </button>
+          <div class="mk-dropdown-content">
+            <div class="mk-dropdown-section">
+              <label class="mk-dropdown-label">Price Range</label>
+              <div class="mk-price-inputs">
+                <input type="number" id="minPrice" placeholder="Min $" min="0" />
+                <span>to</span>
+                <input type="number" id="maxPrice" placeholder="Max $" min="0" />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="mk-filter-group-right">
+        <button class="mk-clear-btn" onclick="clearMkFilters()">
+          <i class="fa-solid fa-rotate-left"></i> Clear
+        </button>
+        <button class="mk-post-btn" onclick="openMkModal()">
+          <i class="fa-solid fa-plus"></i> Post Listing
+        </button>
+      </div>
+    </section>
+
+    <!-- Results Section -->
+    <section class="mk-results">
+      <div class="mk-results-header">
+        <h2>Find Your Essentials</h2>
+        <div class="mk-sort-wrap">
+          <label for="mkSort">Sort:</label>
+          <select id="mkSort" class="mk-sort-select">
+            <option value="recent">Most Recent</option>
+            <option value="priceLow">Price: Low → High</option>
+            <option value="priceHigh">Price: High → Low</option>
+          </select>
+        </div>
+      </div>
+      <div id="mkGrid" class="mk-grid"></div>
+    </section>
+  </main>
+</div>
+
+<!-- Post Listing Modal -->
+<div id="mkModal" class="mk-modal" role="dialog" aria-modal="true">
+  <div class="mk-modal-overlay" onclick="closeMkModal()"></div>
+  <div class="mk-modal-card">
+    <div class="mk-modal-header">
+      <h3>Sell Your Item</h3>
+      <button class="mk-modal-close" onclick="closeMkModal()" aria-label="Close">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+    
+    <form id="mkForm" class="mk-modal-form">
+      <!-- Image Drop Zone -->
+      <div class="mk-form-field">
+        <label class="mk-form-label">Item Photo</label>
+        <div class="mk-dropzone" id="mkDropzone">
+          <input type="file" id="itemPicture" accept="image/*" class="mk-dropzone-input" />
+          <div class="mk-dropzone-content" id="mkDropzoneContent">
+            <i class="fa-solid fa-cloud-arrow-up"></i>
+            <p>Drag & drop your photo here</p>
+            <span>or click to browse</span>
+          </div>
+          <div class="mk-dropzone-preview" id="mkDropzonePreview">
+            <img id="mkPreviewImg" src="" alt="Preview" />
+            <button type="button" class="mk-remove-img" onclick="removeMkImage()">
+              <i class="fa-solid fa-trash"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="mk-form-field">
+        <label class="mk-form-label">Item Name *</label>
+        <input id="itemTitle" type="text" required placeholder="e.g., Ergonomic Desk Chair" />
+      </div>
+
+      <div class="mk-form-row">
+        <div class="mk-form-field">
+          <label class="mk-form-label">Category *</label>
+          <select id="itemCategory" required>
+            <option value="" disabled selected>Select Category</option>
+            <option value="Electronics & Media">Electronics & Media</option>
+            <option value="Home & Garden">Home & Garden</option>
+            <option value="Clothing, Shoes, & Accessories">Clothing & Accessories</option>
+            <option value="Baby & Kids">Baby & Kids</option>
+            <option value="Vehicles">Vehicles</option>
+            <option value="Toys, Games, & Hobbies">Toys & Hobbies</option>
+            <option value="Sports & Outdoors">Sports & Outdoors</option>
+            <option value="Collectibles & Art">Collectibles & Art</option>
+            <option value="Pet supplies">Pet Supplies</option>
+            <option value="Health & Beauty">Health & Beauty</option>
+            <option value="Business equipment">Business Equipment</option>
+            <option value="Tickets">Tickets</option>
+            <option value="General (other)">General (Other)</option>
+          </select>
+        </div>
+        <div class="mk-form-field">
+          <label class="mk-form-label">Condition *</label>
+          <select id="itemCondition" required>
+            <option value="" disabled selected>Select Condition</option>
+            <option value="New">New</option>
+            <option value="Used - Like New">Used - Like New</option>
+            <option value="Used - Good">Used - Good</option>
+            <option value="Used - Fair">Used - Fair</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="mk-form-field">
+        <label class="mk-form-label">Price ($) *</label>
+        <input type="number" id="itemPrice" placeholder="150.00" required min="0.01" step="0.01" />
+      </div>
+
+      <div class="mk-form-field">
+        <label class="mk-form-label">Description *</label>
+        <textarea id="itemDescription" rows="3" placeholder="Describe the item, its condition, and any flaws." required></textarea>
+      </div>
+
+      <button type="submit" class="mk-submit-btn">
+        <i class="fa-solid fa-paper-plane"></i> Post Listing
+      </button>
+    </form>
+  </div>
+</div>
+
+<!-- Item Detail Modal -->
+<div id="mkDetailModal" class="mk-modal" role="dialog" aria-modal="true">
+  <div class="mk-modal-overlay" onclick="closeMkDetailModal()"></div>
+  <div class="mk-modal-card detail">
+    <div class="mk-modal-header">
+      <h3>Item Details</h3>
+      <button class="mk-modal-close" onclick="closeMkDetailModal()" aria-label="Close">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+    <div class="mk-modal-form">
+      <div class="mk-detail-layout">
+        <div class="mk-detail-image">
+          <img id="detailImg" src="" alt="Item Image" />
+        </div>
+        <div class="mk-detail-info">
+          <h3 class="mk-detail-title" id="detailTitle">Item Name</h3>
+          <p class="mk-detail-price" id="detailPrice">$0.00</p>
+          <div class="mk-detail-tags">
+            <span class="mk-detail-tag" id="detailCategory">Category</span>
+            <span class="mk-detail-tag" id="detailCondition">Condition</span>
+          </div>
+          <p class="mk-detail-section-title">Description</p>
+          <p class="mk-detail-description" id="detailDescription"></p>
+          <div class="mk-detail-actions">
+            <button class="mk-detail-btn primary">Make Offer / Purchase</button>
+            <button class="mk-detail-btn secondary">Contact Seller</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="{% static 'js/marketplace.js' %}"></script>
+{% endblock %}

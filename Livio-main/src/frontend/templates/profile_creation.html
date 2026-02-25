@@ -1,0 +1,88 @@
+{% extends "base_home.html" %}
+{% load static %}
+{% block content %}
+
+<link rel="stylesheet" href="{% static 'css/profile.css' %}">
+
+<!--Is the background for the profile creation page-->
+<div class="background">
+  <img src="{% static 'images/SignUpBackground.png' %}" alt="" aria-hidden="true" />
+</div>
+<div id="profile_creation_background">
+     <h1 id="create_profile_message">Create Your Profile</h1>
+    <div id="profile_creation_field">
+        <div class="form">
+            <form class="actual_form" id="profile_form">
+                    <div>
+                        <input name="profilePicture" type="file" id="profilePicture" accept="image/*" required>
+                        <label style="color: rgb(255, 255, 255);">Upload Profile Picture</label>
+                    </div>
+
+                    <!-- <div>
+                        <label>Profile Picture</label>
+                        <div class="file-upload">
+                            <input name="profilePicture" type="file" id="profilePicture" accept="image/*" required>
+                        </div>
+                    </div> -->
+                    <div class="profileCreationRow">
+                        <!-- First Name -->
+                        <div id="firstNameBox">
+                            <label class="label">First Name</label>
+                            <input name="firstName" type="text" placeholder="Enter first name" class="input-field" required>
+                        </div>
+
+                        <!-- Last Name -->
+                        <div id="lastNameBox">
+                            <label class="label">Last Name</label>
+                            <input name="lastName" type="text" placeholder="Enter last name" class="input-field" required>
+                        </div>
+                    </div>
+                    <div class="profileCreationRow">
+                        <!-- Age -->
+                        <div id="ageBox">
+                            <label class="label">Age</label>
+                            <input name="age" type="number" placeholder="21" min="16" max="80" class="input-field" required>
+                        </div>
+
+                        <!-- Gender -->
+                        <div id="genderBox">
+                            <label class="label">Gender</label>
+                            <select name="gender" id="gender_dropdown" class="input-field" required>
+                                <option value="">Select gender</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="profileCreationRow">
+                        <!-- Grade Level -->
+                        <div id="gradeLevelBox">
+                            <label class="label">Grade Level</label>
+                            <select name="gradeLevel" id="gradeLevel_dropdown" class="input-field" required>
+                                <option value="">Select grade level</option>
+                            </select>
+                        </div>
+
+                        <!-- Nationality -->
+                        <div id="nationalityBox">
+                            <label class="label">Nationality</label>
+                            <select name="nationality" id="nationality_dropdown" class="input-field" required>
+                                <option value="">Select nationality</option>
+                            </select>
+                        </div>
+                    </div>
+                 
+
+                    <!-- Bio -->
+                    <div class="profileCreationRow">
+                        <label  class="label">Bio</label>
+                        <textarea name="bio" placeholder="Tell us about yourself..." class="input-field" required></textarea>
+                    </div>
+
+                <!-- Submit Button -->
+                <button id="profile_creation_submit" type="submit">Submit Profile</button>
+            </form>
+          </div>
+</div>
+</div>
+<script src="{% static 'js/profile_creation.js' %}"></script>
+{% endblock %}

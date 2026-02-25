@@ -1,0 +1,644 @@
+/* =================================================================
+   ROOMMATES PAGE STYLES
+   Matches the glass-morphism aesthetic of the Livio platform
+   ================================================================= */
+
+/* ---------- CSS Variables (matches base.css) ---------- */
+:root {
+    --glass-bg: rgba(20, 20, 20, 0.75);
+    --glass-border: rgba(255, 255, 255, 0.15);
+    --accent-color: #4ade80;
+    --accent-secondary: #22d3ee;
+    --text-main: #ffffff;
+    --text-muted: rgba(255, 255, 255, 0.7);
+    --card-radius: 20px;
+    --input-radius: 10px;
+}
+
+/* ---------- Background ---------- */
+.background {
+    position: fixed;
+    inset: 0;
+    z-index: -2;
+    overflow: hidden;
+}
+
+.background img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    filter: blur(4px) brightness(0.6) saturate(0.9);
+    transform: scale(1.05);
+}
+
+.background::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    background: linear-gradient(
+        to bottom,
+        rgba(255, 255, 255, 0.1) 0%,
+        rgba(15, 15, 15, 0.85) 100%
+    );
+}
+
+/* =================================================================
+   POST CREATION SECTION (When user has no roommate post)
+   ================================================================= */
+#hidden_creation {
+    display: none;
+}
+
+#no_roommate_post {
+    max-width: 700px;
+    margin: 0 auto 40px;
+    padding: 40px;
+    background: var(--glass-bg);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--card-radius);
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
+}
+
+#title_no_post {
+    text-align: center;
+    margin-bottom: 30px;
+}
+
+#title_no_post h1 {
+    margin: 0;
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: var(--text-main);
+    background: linear-gradient(135deg, var(--accent-color), var(--accent-secondary));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+#roommatePostCreationForm {
+    width: 100%;
+}
+
+#roommatePostCreationFormAlign {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+#roommatePostCreationFormAlign > div {
+    width: 100%;
+}
+
+.formLabel {
+    display: block;
+    margin-bottom: 8px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--text-main);
+}
+
+/* Form Input Fields */
+.input-field {
+    width: 100%;
+    padding: 14px 16px;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--input-radius);
+    color: var(--text-main);
+    font-size: 1rem;
+    font-family: inherit;
+    outline: none;
+    transition: all 0.2s ease;
+    box-sizing: border-box;
+}
+
+.input-field::placeholder {
+    color: rgba(255, 255, 255, 0.4);
+}
+
+.input-field:focus {
+    border-color: rgba(74, 222, 128, 0.5);
+    background: rgba(255, 255, 255, 0.1);
+    box-shadow: 0 0 0 3px rgba(74, 222, 128, 0.1);
+}
+
+select.input-field {
+    cursor: pointer;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23ffffff' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 14px center;
+    padding-right: 40px;
+}
+
+select.input-field option {
+    background: #1a1a1a;
+    color: var(--text-main);
+}
+
+textarea.input-field {
+    min-height: 100px;
+    resize: vertical;
+    line-height: 1.5;
+}
+
+#submit_post_button {
+    width: 100%;
+    max-width: 300px;
+    margin: 20px auto 0;
+    padding: 14px 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    background: linear-gradient(135deg, #4a4a4a, #2a2a2a);
+    border: 1px solid var(--glass-border);
+    border-radius: 12px;
+    color: var(--text-main);
+    font-size: 1rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+}
+
+#submit_post_button:hover {
+    background: linear-gradient(135deg, #5a5a5a, #3a3a3a);
+    transform: translateY(-2px);
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.4);
+}
+
+/* =================================================================
+   MAIN ROOMMATES PAGE LAYOUT
+   ================================================================= */
+#hidden {
+    display: none;
+}
+
+#roommates_page {
+    display: grid;
+    grid-template-columns: 1fr 350px;
+    gap: 30px;
+    max-width: 1600px;
+    margin: 0 auto;
+    padding: 20px 40px 60px;
+}
+
+/* ---------- Filter Bar ---------- */
+#filter_bar {
+    grid-column: 1 / -1;
+    padding: 20px 30px;
+    background: var(--glass-bg);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid var(--glass-border);
+    border-radius: 16px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+    margin-bottom: 10px;
+}
+
+#filter_bar h1 {
+    margin: 0;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--text-main);
+    text-align: center;
+}
+
+/* ---------- Main Posts Section ---------- */
+#roommate_posts {
+    background: var(--glass-bg);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--card-radius);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    padding: 30px;
+    min-height: 400px;
+}
+
+#post_list {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+/* =================================================================
+   ROOMMATE POST CARDS
+   ================================================================= */
+.post {
+    background: linear-gradient(165deg, #252525 0%, #1a1a1a 100%);
+    border: 1px solid var(--glass-border);
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+    transition: all 0.3s ease;
+}
+
+.post:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.4);
+    border-color: rgba(74, 222, 128, 0.3);
+}
+
+/* Post Main Grid */
+.post_main {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0;
+}
+
+/* ---------- Identification Section (Profile) ---------- */
+.indentification {
+    padding: 24px;
+    background: rgba(255, 255, 255, 0.03);
+    border-right: 1px solid rgba(255, 255, 255, 0.08);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.profile_picture_flex {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 16px;
+}
+
+.profile_picture {
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 4px solid rgba(74, 222, 128, 0.4);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+    transition: all 0.3s ease;
+}
+
+.post:hover .profile_picture {
+    border-color: var(--accent-color);
+    transform: scale(1.05);
+}
+
+.names {
+    text-align: center;
+    margin-bottom: 8px;
+}
+
+.names h1,
+.name {
+    margin: 0;
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: var(--text-main);
+}
+
+.personal_info {
+    text-align: center;
+}
+
+.personal_info h3 {
+    margin: 0;
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: var(--text-muted);
+    text-transform: capitalize;
+}
+
+/* ---------- Title & Description Section ---------- */
+.title_description {
+    padding: 24px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.title_description h1,
+.title {
+    margin: 0 0 12px;
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: var(--text-main);
+    text-align: center;
+}
+
+.description {
+    margin: 0;
+    font-size: 0.95rem;
+    color: var(--text-muted);
+    line-height: 1.6;
+    text-align: center;
+}
+
+/* ---------- Fun Fact Section ---------- */
+.fun_fact {
+    padding: 20px 24px;
+    background: rgba(74, 222, 128, 0.05);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.funFact {
+    text-align: center;
+    margin-bottom: 8px;
+}
+
+.funFact_title {
+    margin: 0;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--accent-color);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.funFact_message {
+    margin: 0;
+    font-size: 0.95rem;
+    color: var(--text-muted);
+    text-align: center;
+    font-style: italic;
+}
+
+/* ---------- Other Info Section (Budget, Move-in) ---------- */
+.other_info {
+    padding: 20px 24px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 8px;
+    background: rgba(255, 255, 255, 0.02);
+}
+
+.features_box {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: center;
+    margin-bottom: 8px;
+}
+
+.budget,
+.moveInDate {
+    margin: 0;
+    font-size: 0.95rem;
+    color: var(--text-main);
+    text-align: center;
+    font-weight: 500;
+}
+
+.budget {
+    color: var(--accent-color);
+    font-weight: 700;
+    font-size: 1.1rem;
+}
+
+/* ---------- Post Bottom (Interest Section) ---------- */
+.post_bottom {
+    padding: 16px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    background: rgba(255, 255, 255, 0.03);
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    flex-wrap: wrap;
+}
+
+.interested_count {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: var(--accent-color);
+}
+
+.interested_message {
+    margin: 0;
+    font-size: 0.9rem;
+    color: var(--text-muted);
+}
+
+.interestButton {
+    padding: 10px 20px;
+    background: linear-gradient(135deg, var(--accent-color), var(--accent-secondary));
+    border: none;
+    border-radius: 30px;
+    color: #000;
+    font-size: 0.9rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 4px 12px rgba(74, 222, 128, 0.3);
+}
+
+.interestButton:hover {
+    transform: translateY(-2px) scale(1.02);
+    box-shadow: 0 8px 20px rgba(74, 222, 128, 0.4);
+}
+
+/* Hidden ID element */
+.id {
+    display: none;
+}
+
+/* =================================================================
+   INTERESTED SIDEBAR
+   ================================================================= */
+#interested_buffer {
+    background: var(--glass-bg);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--card-radius);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    padding: 24px;
+    position: sticky;
+    top: 180px;
+    max-height: calc(100vh - 220px);
+    overflow-y: auto;
+}
+
+#interested_buffer h2 {
+    margin: 0 0 20px;
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: var(--text-main);
+    text-align: center;
+    padding-bottom: 16px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+#interested_posts {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+/* Empty state message */
+#interested_buffer p {
+    color: var(--text-muted);
+    font-size: 0.95rem;
+    line-height: 1.6;
+}
+
+/* ---------- Interested Entry Cards ---------- */
+.interested_entry {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 14px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    transition: all 0.2s ease;
+}
+
+.interested_entry:hover {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(74, 222, 128, 0.3);
+    transform: translateX(4px);
+}
+
+.interested_image {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid rgba(74, 222, 128, 0.4);
+    flex-shrink: 0;
+}
+
+.interested_name {
+    margin: 0;
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--text-main);
+}
+
+/* Scrollbar Styling for Sidebar */
+#interested_buffer::-webkit-scrollbar {
+    width: 6px;
+}
+
+#interested_buffer::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 3px;
+}
+
+#interested_buffer::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 3px;
+}
+
+#interested_buffer::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+/* =================================================================
+   UTILITY CLASSES
+   ================================================================= */
+span {
+    display: inline;
+}
+
+/* =================================================================
+   RESPONSIVE DESIGN
+   ================================================================= */
+@media (max-width: 1200px) {
+    #roommates_page {
+        grid-template-columns: 1fr 300px;
+        padding: 20px;
+        gap: 20px;
+    }
+}
+
+@media (max-width: 1000px) {
+    #roommates_page {
+        grid-template-columns: 1fr;
+    }
+    
+    #interested_buffer {
+        position: static;
+        max-height: none;
+        order: -1;
+    }
+    
+    .post_main {
+        grid-template-columns: 1fr;
+    }
+    
+    .indentification {
+        border-right: none;
+    }
+}
+
+@media (max-width: 768px) {
+    #roommates_page {
+        padding: 12px;
+    }
+    
+    #no_roommate_post {
+        margin: 0 12px 40px;
+        padding: 24px;
+    }
+    
+    #title_no_post h1 {
+        font-size: 1.4rem;
+    }
+    
+    #filter_bar {
+        padding: 16px 20px;
+        border-radius: 12px;
+    }
+    
+    #filter_bar h1 {
+        font-size: 1.2rem;
+    }
+    
+    #roommate_posts {
+        padding: 16px;
+        border-radius: 16px;
+    }
+    
+    .post {
+        border-radius: 12px;
+    }
+    
+    .indentification,
+    .title_description,
+    .fun_fact,
+    .other_info {
+        padding: 16px;
+    }
+    
+    .profile_picture {
+        width: 80px;
+        height: 80px;
+    }
+    
+    .names h1 {
+        font-size: 1.1rem;
+    }
+    
+    #interested_buffer {
+        padding: 16px;
+        border-radius: 16px;
+    }
+}
+
+@media (max-width: 480px) {
+    #no_roommate_post {
+        padding: 20px;
+    }
+    
+    #submit_post_button {
+        width: 100%;
+        max-width: none;
+    }
+    
+    .post_bottom {
+        flex-direction: column;
+        text-align: center;
+    }
+    
+    .interestButton {
+        width: 100%;
+        max-width: 200px;
+    }
+}

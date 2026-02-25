@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% load static %}
+{% block content %}
+<link rel="stylesheet" href="{% static 'css/signup_styles.css' %}">
+
+<!-- Background image + gradient overlay -->
+<div class="background">
+  <img src="{% static 'images/SignUpBackground.png' %}" alt="" aria-hidden="true" />
+</div>
+
+<!-- Main (fixed to the viewport, no scroll) -->
+<main class="container">
+  <!-- Left/Right order is controlled by CSS; keep markup as you had -->
+  <section class="signup-box" aria-labelledby="signupTitle">
+    <h2 id="signupTitle">Sign Up</h2>
+
+    <form id="signupForm" class="form-container" action="#" method="post" novalidate>
+      <label class="sr-only" for="username">Username</label>
+      <input name="username" id="username" type="text" class="input-field" placeholder="Username" autocomplete="username" required />
+
+      <label class="sr-only" for="email">Email</label>
+      <input name="email" id="email" type="email" class="input-field" placeholder="Email" autocomplete="email" required />
+
+      <div class="password-container">
+        <label class="sr-only" for="password">Password</label>
+        <input name="password" id="password" type="password" class="input-field" placeholder="Password" autocomplete="new-password" required />
+        <button type="button" class="toggle-password-btn" aria-label="Show or hide password" data-target="password">
+          <img src="{% static 'images/eye-slash.png' %}" alt="" class="toggle-password-icon" data-target="password" aria-hidden="true" />
+        </button>
+      </div>
+
+      <div class="password-container">
+        <label class="sr-only" for="confirmPassword">Confirm Password</label>
+        <input id="confirmPassword" type="password" class="input-field" placeholder="Confirm Password" autocomplete="new-password" required />
+        <button type="button" class="toggle-password-btn" aria-label="Show or hide password" data-target="confirmPassword">
+          <img src="{% static 'images/eye-slash.png' %}" alt="" class="toggle-password-icon" data-target="confirmPassword" aria-hidden="true" />
+        </button>
+      </div>
+
+      <button type="submit" class="signup-button">Create Account</button>
+
+      <a href="{% url 'login' %}" class="signin-link">Already have an account? Sign In</a>
+    </form>
+  </section>
+
+  <aside class="image-container" aria-label="Livio Branding">
+    <img src="{% static 'images/text1.png' %}" alt="Livio Student Housing branding" />
+  </aside>
+</main>
+
+<script src="{% static 'js/signup.js' %}"></script>
+{% endblock %}

@@ -1,0 +1,255 @@
+.picture_header{
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding-top: 10px;
+    column-gap: 50px;
+}
+
+#profile_image{
+    border-radius: 50%; 
+    border: solid #0000007a 1px;
+    height: 100px;
+    width: 100px;
+}
+
+
+#editProfileForm{
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: repeat(4, 1fr);
+    gap: 10px;
+}
+
+#firstName{
+    grid-column: 1 / 2;
+    grid-row: 1 / 2;
+}
+
+#lastName{
+    grid-column: 2 / 3;
+    grid-row: 1/ 2;
+}
+
+#age
+{
+    grid-column: 1 / 2;
+    grid-row: 2 / 3;    
+}
+
+#bio{
+    grid-column: 1 / 3;
+    grid-row: 4 /5;
+}
+
+#main_profile_page{
+    display: grid;
+    grid-template-columns: repeat(3,1fr);
+    grid-template-rows: auto auto auto auto;
+    gap: 20px;
+}
+
+#picture_welcome{
+    grid-column: 1 / 4;
+    grid-row: 1 / 2;
+    margin-left: 150px;
+    margin-right: 150px;
+    padding-bottom: 20px;
+    border-radius: 20px;
+}
+
+#welcome_message{
+    color: #ffffff;
+    margin: 0px;
+    padding: 0px;
+    font-size: 70px;
+}
+
+#roommate_title{
+    place-self: center;
+}
+
+#roommate_insights{
+    grid-column: 1 / 4;
+    grid-row: 2 / 3;
+    display: grid;
+    grid-template-columns: 1fr;
+    grid-template-rows: 1fr 1fr;
+    margin-left: 150px;
+    margin-right: 150px;
+    padding-bottom: 20px;
+    border-radius: 20px;
+}
+
+#roommate_post_insights{
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    column-gap: 50px;
+}
+
+#edit{
+    grid-column: 1 / 3;
+    grid-row: 3 / 4;
+    margin-left: 150px;
+    padding-bottom: 20px;
+    border-radius: 20px;
+}
+#summary{
+    grid-column: 3 / 4;
+    grid-row: 3 / 4;
+    margin-right: 150px;
+    padding-bottom: 20px;
+    border-radius: 20px;
+}
+
+
+#log_out{
+    grid-column: 1 / 4;
+    grid-row: 4 / 5;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-left: 150px;
+    margin-right: 150px;
+    border-radius: 20px;
+}
+
+#interestedInYou{
+    display: grid;
+    grid-template-columns: 1fr;
+    grid-template-rows: 1fr 1fr;
+}
+
+#yourInterestedIn{
+    display: grid;
+    grid-template-columns: 1fr;
+    grid-template-rows: 1fr 1fr;
+}
+
+span{
+    display: block;
+    place-self: center;
+}
+
+.input-field {
+  padding: 12px 16px;
+  margin: 8px 0;
+  border: 1px solid #e0e0e0;
+  border-radius: 10px;
+  font-size: 1rem;
+  background: rgba(255, 255, 255, 0.8);
+  transition: all 0.2s;
+  outline: solid #000000 2px;
+  width: 100%;
+}
+
+.input-field:hover {
+  padding: 12px 16px;
+  margin: 8px 0;
+  border: 1px solid #e0e0e0;
+  border-radius: 10px;
+  font-size: 1rem;
+  background: rgba(255, 255, 255, 0.8);
+  transition: all 0.2s;
+  outline: solid #10b981 2px;
+  width: 100%;
+}
+
+.background {
+  position: fixed;
+  inset: 0;
+  z-index: -2;
+}
+.background img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: brightness(.85) contrast(1.1) saturate(1.05);
+}
+.background::after {
+  content:"";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  /* Specific gradient for Signup page */
+  background:
+    radial-gradient(1200px 900px at 15% 8%, rgba(27, 82, 82, 0.8), rgba(0,0,0,0) 85%),
+    radial-gradient(1300px 900px at 85% 85%, rgba(9, 146, 94, 0.4), rgba(0,0,0,0) 80%),
+    linear-gradient(135deg, rgba(0,0,0,.78) 0%, rgba(0,0,0,.55) 40%, rgba(0,0,0,.48) 100%);
+}
+
+.page_background{
+    background-color: rgba(20, 20, 20, 0.65);
+}
+
+#log_out_button{
+  width: 20%;
+  padding: 14px;
+  margin-top: 20px;
+  margin-bottom: 50px;
+  border: none;
+  border-radius: 12px;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #000000;
+  cursor: pointer;
+  background: red;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+#interestedInYouNumber, #yourInterestedInNumber{
+color: #10b981; 
+  font-size: 3.5rem; 
+  font-weight: 700; 
+  font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', 'Courier New', monospace;
+  line-height: 1.2;
+}
+
+#account_summary
+{
+    display: grid;
+    justify-items: start;
+}
+
+.summary_item
+{
+    padding: 10px;
+    color: #10b981; 
+    display: inline;
+}
+
+#editProfileButton, #cancel_edit
+{
+    /* border-radius: 20%;
+    background-color:  #10b981;  */
+    width: 10%;
+  padding: 10px;
+  border: none;
+  border-radius: 12px;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #000000;
+  cursor: pointer;
+  background: #10b981;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+#submit_edit_button
+{
+    width: 100%;
+  padding: 10px;
+  margin-bottom: 20px;
+  margin-right: auto;
+  border: none;
+  border-radius: 12px;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #000000;
+  cursor: pointer;
+  background: #10b981;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+  transition: transform 0.2s, box-shadow 0.2s;
+}

@@ -1,0 +1,195 @@
+/*CSS for the profile Page*/
+
+#firstNameBox,
+#lastNameBox,
+#ageBox,
+#genderBox,
+#gradeLevelBox,
+#nationalityBox {
+    display: flex;
+    flex-direction: column;
+    flex: 1; 
+}
+
+.profileCreationRow:has(textarea) {
+    flex-direction: column;
+}
+
+
+#firstNameBox
+{
+    display: inline-block;
+}
+
+#lastNameBox
+{
+    display: inline-block;
+}
+
+#ageBox{
+    display:inline-block;
+}
+
+#genderBox{
+    display: inline-block;
+}
+
+#gradeLevelBox{
+    display: inline-block;
+}
+
+#nationalityBox{
+    display: inline-block;
+}
+
+.label{
+     display: block;
+}
+
+#profile_creation_field{
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-bottom: 50px;
+}
+
+#profile_creation_prompt
+{
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: black;
+    margin-left: 100px;
+    margin-right: 100px;
+}
+
+.profileCreationRow{
+    margin: 10px 0;
+    display: flex;
+    gap: 15px;
+}
+
+.input-field {
+  width: 100%;
+  padding: 12px 16px;
+  margin: 8px 0;
+  border: 1px solid #e0e0e0;
+  border-radius: 12px;
+  font-size: 1rem;
+  background: rgba(255, 255, 255, 0.948);
+  transition: all 0.2s;
+  outline: solid #10b981 4px;
+}
+
+select.input-field {
+    width: 100%;
+    padding: 12px 16px;
+    margin: 8px 0;
+    border: 1px solid #e0e0e0;
+    border-radius: 12px;
+    font-size: 1rem;
+    background: rgba(255, 255, 255, 0.8);
+    transition: all 0.2s;
+    outline: solid #10b981 4px;
+}
+
+textarea.input-field {
+    width: 100%;
+    min-height: 100px;
+    resize: vertical;
+    font-family: inherit;
+    outline: solid #10b981 4px;
+}
+
+#profile_creation_submit{
+  width: 100%;
+  padding: 14px;
+  margin-top: 20px;
+  border: none;
+  border-radius: 12px;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #000000;
+  cursor: pointer;
+  background: linear-gradient(135deg, #177a38, #0bbe56);
+  box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+
+/*Will make the form fields for name and etc, be larger nad take up more space on the screen */
+
+input[type="text"]
+{
+    width: 1fr;
+    outline: solid #10b981 4px;
+}
+
+input[type="number"]
+{
+    outline: solid #10b981 4px;
+}
+
+input[type="select"]
+{
+    width: 1fr;
+    outline:solid #10b981 4px;
+}
+
+input[type="textarea"]
+{
+    outline: solid #10b981 4px;
+}
+
+.background {
+  position: fixed;
+  inset: 0;
+  z-index: -2;
+}
+.background img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: brightness(.85) contrast(1.1) saturate(1.05);
+}
+.background::after {
+  content:"";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  /* Specific gradient for Signup page */
+  background:
+    radial-gradient(1200px 900px at 15% 8%, rgba(49, 45, 157, 0.8), rgba(0,0,0,0) 85%),
+    radial-gradient(1300px 900px at 85% 85%, rgba(255,92,0,.4), rgba(0,0,0,0) 80%),
+    linear-gradient(135deg, rgba(0,0,0,.78) 0%, rgba(0,0,0,.55) 40%, rgba(0,0,0,.48) 100%);
+}
+
+.form{
+    padding: 20px;
+    place-self: center;
+}
+
+#profile_creation_background{
+    display: grid;
+    grid-template-columns: 1;
+    grid-template-rows: auto auto; 
+    background-color: rgba(20, 20, 20, 0.65);
+    border-radius: 10%;
+    margin-left: 500px;
+    margin-right: 500px;
+    margin-bottom: 20px;
+}
+
+#create_profile_message{
+    grid-row: 1 /2;
+    place-self: center;
+}
+
+#actual_form
+{
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-columns: auto auto auto auto auto;
+    gap: 30px;
+
+}

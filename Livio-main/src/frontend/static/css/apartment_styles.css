@@ -1,0 +1,530 @@
+/* ---------- Livio Apartments Styles (Fix 3D Flip) ---------- */
+
+/* Global / Setup */
+:root {
+    --content-max: 1600px;
+    --glass-bg: rgba(20, 20, 20, 0.75);
+    --glass-border: rgba(255, 255, 255, 0.15);
+    --accent-color: #ffffff43;
+    --dropdown-bg: #1a1a1a;
+}
+
+/* ---------- Page Layout ---------- */
+.page-container {
+    max-width: var(--content-max);
+    margin: 0 auto;
+    padding: 20px 40px;
+    width: 100%;
+}
+
+/* ---------- Background ---------- */
+.background {
+    position: fixed;
+    inset: 0;
+    z-index: -2;
+    overflow: hidden;
+}
+
+.background img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    filter: blur(4px) brightness(0.6) saturate(0.9);
+    transform: scale(1.05);
+}
+
+.background::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    background: linear-gradient(
+        to bottom,
+        rgba(255, 255, 255, 0.1) 0%,
+        rgba(15, 15, 15, 0.85) 100%
+    );
+}
+
+/* ---------- Filter Bar ---------- */
+.filter-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 15px;
+    padding: 15px 25px;
+    margin-bottom: 30px;
+    
+    background: var(--glass-bg);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid var(--glass-border);
+    border-radius: 16px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+    position: relative;
+    z-index: 100; 
+}
+
+.filter-group-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.filter-label {
+    font-weight: 700;
+    margin-right: 10px;
+    color: #fff;
+    font-size: 1.1rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* Dropdown Styling */
+.dropdown {
+    position: relative;
+    display: inline-block;
+}
+
+.dropdown-btn {
+    background: rgba(255, 255, 255, 0.08);
+    color: white;
+    padding: 10px 20px;
+    font-size: 14px;
+    font-weight: 600;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 30px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.dropdown-btn:hover, .dropdown.active .dropdown-btn {
+    background: rgba(255, 255, 255, 0.2);
+    border-color: rgba(255, 255, 255, 0.4);
+    transform: translateY(-1px);
+}
+
+.dropdown-content {
+    display: none;
+    position: absolute;
+    top: 120%; 
+    left: 0;
+    background: var(--dropdown-bg);
+    min-width: 220px;
+    box-shadow: 0 15px 40px rgba(0,0,0,0.6);
+    border: 1px solid var(--glass-border);
+    border-radius: 12px;
+    padding: 10px;
+    z-index: 1000;
+    overflow: hidden;
+}
+
+.dropdown-content.show {
+    display: block;
+    animation: fadeIn 0.2s ease;
+}
+
+.dropdown-content label {
+    display: block;
+    padding: 10px 12px;
+    color: #e0e0e0;
+    cursor: pointer;
+    border-radius: 8px;
+    transition: background 0.2s;
+    font-size: 0.95rem;
+    user-select: none;
+}
+
+.dropdown-content label:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
+}
+
+.dropdown-content input[type="checkbox"] {
+    margin-right: 10px;
+    transform: scale(1.1);
+    accent-color: var(--accent-color);
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-8px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.clear-filters-btn {
+    background: transparent;
+    border: 1px solid rgba(255, 100, 100, 0.5);
+    color: #ff8080;
+    padding: 8px 16px;
+    border-radius: 30px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 0.9rem;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap:10px;
+}
+
+.clear-filters-btn:hover {
+    background: rgba(255, 100, 100, 0.1);
+    color: #ffaaaa;
+}
+
+.add-posting-btn {
+    background: transparent;
+    border: 1px solid rgba(100, 255, 128, 0.5);
+    color: #02e20a;
+    padding: 8px 16px;
+    border-radius: 30px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 0.9rem;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.add-posting-btn:hover {
+    background: rgba(100, 255, 134, 0.1);
+    color: #aaffc1;
+}
+
+/* ---------- Content Grid ---------- */
+.content-grid {
+    display: grid;
+    grid-template-columns: 1fr 450px;
+    gap: 30px;
+    align-items: start;
+    position: relative;
+}
+
+.listings-column {
+    display: flex;
+    flex-direction: column;
+    gap: 30px;
+}
+
+/* ---------- Listings Card (FIXED 3D FLIP) ---------- */
+.card-wrapper {
+    perspective: 2000px;
+}
+
+.card {
+    width: 100%;
+    position: relative;
+    min-height: 300px;
+    transform-style: preserve-3d;
+    transition: transform 0.8s;
+    cursor: pointer;
+    background: transparent;
+}
+
+.card:hover .card-front {
+    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.5);
+    border-color: rgba(255, 255, 255, 0.3);
+    transform: translateY(-3px);
+}
+
+.card.flipped {
+    transform: rotateY(180deg);
+}
+
+/* Shared styles for both faces */
+.card-front, .card-back {
+    width: 100%;
+    height: 100%;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    border-radius: 20px;
+    overflow: hidden;
+    border: 1px solid var(--glass-border);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+}
+
+/* Front Face */
+.card-front {
+    position: relative;
+    display: flex;
+    background: rgba(30, 30, 30, 0.6);
+    backdrop-filter: blur(10px);
+    transition: transform 0.3s, box-shadow 0.3s;
+    z-index: 2;
+    flex-direction: row;
+}
+
+/* Back Face */
+.card-back {
+    position: absolute;
+    top: 0;
+    left: 0;
+    background: #151515;
+    transform: rotateY(180deg);
+    padding: 30px;
+    color: #e0e0e0;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    z-index: 1;
+}
+
+.card-back h2 {
+    border-bottom: 1px solid rgba(255,255,255,0.2);
+    padding-bottom: 10px;
+    margin-bottom: 15px;
+    color: #fff;
+}
+
+/* Image Gallery */
+.image-gallery {
+    width: 40%;
+    position: relative;
+    background: #000;
+    flex-shrink: 0;
+}
+
+.apartment-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    position: absolute;
+    top: 0; left: 0;
+    opacity: 0;
+    transition: opacity 0.5s;
+}
+
+.apartment-image.active { opacity: 1; }
+
+.image-dots {
+    position: absolute;
+    bottom: 15px; left: 50%;
+    transform: translateX(-50%);
+    display: flex; gap: 6px;
+    z-index: 5;
+}
+
+.dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.5);
+    cursor: pointer;
+}
+
+.dot.active { background: #fff; transform: scale(1.2); }
+
+/* Details */
+.details {
+    flex: 1;
+    padding: 25px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    color: #f5f5f5;
+}
+
+.user-info {
+    display: flex; align-items: center; gap: 12px;
+    padding-bottom: 12px; border-bottom: 1px solid rgba(255,255,255,0.1);
+    margin-bottom: 12px;
+}
+
+.user-pic {
+    width: 48px; height: 48px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid rgba(255,255,255,0.8);
+}
+
+.username { font-weight: 700; font-size: 1.05rem; }
+
+.apartment-details p {
+    margin: 6px 0;
+    font-size: 0.95rem;
+    line-height: 1.5;
+    color: #ffffff;
+}
+
+.price {
+    color: var(--accent-colo);
+    font-weight: 800;
+    font-size: 1.2rem;
+}
+
+.choose-button {
+    align-self: flex-start;
+    background: linear-gradient(135deg, #4a4a4a, #2a2a2a);
+    color: white;
+    border: 1px solid rgba(255,255,255,0.2);
+    padding: 10px 24px;
+    border-radius: 30px;
+    cursor: pointer;
+    font-weight: 600;
+    margin-top: 15px;
+    transition: all 0.2s;
+}
+
+.choose-button:hover {
+    background: linear-gradient(135deg, #5a5a5a, #3a3a3a);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+}
+
+/* ---------- Sticky Map ---------- */
+.map-column {
+    height: 100%;
+}
+
+.sticky-map-container {
+    position: sticky;
+    top: 180px;
+    width: 100%;
+    height: 450px;
+    background: rgba(30, 30, 30, 0.5);
+    border-radius: 20px;
+    border: 1px solid var(--glass-border);
+    overflow: hidden;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+}
+
+#map { width: 100%; height: 100%; border-radius: 20px; }
+
+/* ---------- Popup ---------- */
+.popup {
+    position: fixed;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    background: #fff;
+    color: #111;
+    width: 90%; max-width: 450px;
+    padding: 25px;
+    border-radius: 12px;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.8);
+    z-index: 3000;
+    display: none;
+}
+
+.popup.active { display: block; }
+
+.popup-header {
+    display: flex; justify-content: space-between; align-items: center;
+    border-bottom: 2px solid #eee;
+    margin-bottom: 15px; padding-bottom: 10px;
+}
+
+.popup-close {
+    background: none; border: none; font-size: 1.8rem; cursor: pointer; color: #555;
+}
+
+/* ---------- Add Post Form Styles (NEW) ---------- */
+.form-group {
+    margin-bottom: 15px;
+    
+    
+}
+
+.form-row {
+    display: flex;
+    gap: 15px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: #333; /* Darker for white modal background */
+}
+
+/* If you want the modal to be dark themed, change .popup background above, 
+   otherwise we style inputs for light background */
+.popup {
+    background: #2a2a2a; /* Dark modal background */
+    color: #fff;
+    border: 1px solid #444;
+    height:auto;
+    overflow-y: auto;
+    width: 90%;          /* Mobile friendly */
+    max-width: 500px;    /* Standard modal width */
+    height: auto;        /* KEY FIX: Let box grow with content */
+    max-height: 90vh;    /* Stop it from going off-screen */
+    
+}
+
+.popup-header {
+    border-bottom: 1px solid #444;
+}
+
+.popup-close {
+    color: #fff;
+}
+
+.popup-content {
+    padding: 25px;
+    overflow-y: auto;
+}
+
+.form-group label {
+    color: #ccc;
+}
+
+.form-group input, 
+.form-group select, 
+.form-group textarea {
+    width: 100%;
+    padding: 10px;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 8px;
+    color: #fff;
+    font-size: 1rem;
+    outline: none;
+}
+
+.form-group input:focus, 
+.form-group select:focus, 
+.form-group textarea:focus {
+    border-color: var(--accent-color);
+    background: rgba(255, 255, 255, 0.15);
+}
+
+.submit-btn {
+    width: 100%;
+    padding: 12px;
+    background: linear-gradient(135deg, #919191, #4a4a4a);
+    box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+    transition: transform 0.2s, box-shadow 0.2s;
+    color: #000;
+    font-weight: 800;
+    border: none;
+    border-radius: 30px;
+    cursor: pointer;
+    margin-top: 10px;
+    transition: transform 0.2s;
+}
+
+.submit-btn:hover {
+    transform: scale(1.02);
+    background: linear-gradient(135deg, #4a4a4a, #919191);
+    box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+/* Ensure select dropdown options are readable */
+.form-group select option {
+    /*background: #1a1a1a;*/
+    color: #fff;
+}
+
+/* ---------- Responsive ---------- */
+@media (max-width: 1100px) {
+    .content-grid { grid-template-columns: 1fr; }
+    .sticky-map-container { display: none; }
+    .card-front { flex-direction: column; }
+    .image-gallery { width: 100%; height: 250px; }
+    .filter-bar { flex-wrap: wrap; }
+}

@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% load static %}
+{% block content %}
+<link rel="stylesheet" href="{% static 'css/login_styles.css' %}">
+
+<div class="background">
+  <img src="{% static 'images/SignUpBackground.png' %}" alt="" aria-hidden="true" />
+</div>
+
+<main class="container">
+  <!-- Left: Login card -->
+  <section class="login-box" aria-labelledby="loginTitle">
+    <h2 id="loginTitle">Log In</h2>
+
+    <form id="loginForm" class="form-container" action="#" method="post" novalidate>
+      <label class="sr-only" for="loginUsername">Username</label>
+      <input id="loginUsername" type="text" class="input-field" placeholder="Username" autocomplete="username" required />
+
+      <div class="password-container">
+        <label class="sr-only" for="loginPassword">Password</label>
+        <input id="loginPassword" type="password" class="input-field" placeholder="Password" autocomplete="current-password" required />
+        <button type="button" class="toggle-password-btn" aria-label="Show or hide password" data-target="loginPassword">
+          <img src="{% static 'images/eye-slash.png' %}" alt="" class="toggle-password-icon" data-target="loginPassword" aria-hidden="true" />
+        </button>
+      </div>
+
+      <button type="submit" class="login-button">Login</button>
+
+      <a href="#" class="forgot-password">Forgot Password?</a>
+      <a href="{% url 'signup' %}" class="signup-link">Don't have an account? Sign up</a>
+    </form>
+  </section>
+
+  <!-- Right: Image block -->
+  <aside class="image-container" aria-label="Livio Branding">
+    <img src="{% static 'images/text1.png' %}" alt="Livio Student Housing branding" />
+  </aside>
+</main>
+
+<script src="{% static 'js/login.js' %}"></script>
+{% endblock %}

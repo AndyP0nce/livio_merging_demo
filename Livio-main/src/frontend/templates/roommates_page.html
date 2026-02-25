@@ -1,0 +1,76 @@
+{% extends "base_home.html" %}
+{% load static %}
+
+{% block styles %}
+    {{ block.super }}
+    <link rel="stylesheet" href="{% static 'css/roommates_page.css' %}">
+{% endblock %}
+
+
+
+{% block content %}
+
+<div class="background">
+  <img src="{% static 'images/SignUpBackground.png' %}" alt="" aria-hidden="true" />
+</div>
+
+<div id="hidden_creation" style="display: none;">
+<div id="no_roommate_post">
+    <div id="title_no_post">
+        <h1>Get started by creating a roommate post!</h1>
+    </div>
+    <form id="roommatePostCreationForm"> <!--Can have it but have it be hidden so it does not load it in-->
+        <div id="roommatePostCreationFormAlign">
+            <div>
+                <label class="formLabel" for="title">Post Title</label>
+                <input type="text" id="title" name="title" placeholder="Need a roommate ASAP!" class="input-field">
+            </div>
+            <div>
+                <label class="formLabel" for="description">Description</label>
+                <textarea id="description" name="description" placeholder="I am a senior CS student who is looking..." class="input-field"></textarea>
+            </div>
+            <div>
+                <label  class="formLabel" for="funFact">Fun Fact</label>
+                <textarea id="funFact" name="funFact" placeholder="I like dogs..." class="input-field"></textarea>
+            </div>
+            <div>
+                <label class="formLabel" for="budget">Budget</label> <!--Need to convert to double in JS-->
+                <input type="text" id="budget" name="budget" placeholder="$1500.00" class="input-field">
+            </div>
+            <div>
+                <label class="formLabel" for="moveInDate">Move In Date</label>
+                <input type="date" id="moveInDate" name="moveInDate" class="input-field">
+            </div>
+            <div>
+                <!--To Select Features-->
+            </div>
+            <button id="submit_post_button", style="color: rgb(255, 255, 255);">Create Roommate Post!</button>
+        </div>
+    </div>
+</div>
+
+
+<div id="hidden" style="display: none;">
+<div id="roommates_page">
+    <div id="filter_bar">
+        <div style="display: flex; justify-content: center; align-items: center;">
+            <h1>Get ready to meet your future roommates!</h1>
+        </div>
+    </div>
+    <main id="roommate_posts">
+        <div id="post_list">
+        </div>
+    </main>
+    <aside id="interested_buffer">
+        <div style="display: flex; justify-content:center; align-items:center;">
+            <h2>Possible Roommates</h2>
+        </div>
+        <div id="interested_posts"> <!--Will be used for the interested posts-->
+        </div>
+    </aside>
+</div>
+</div>
+<script src="{% static 'js/roommates_page.js' %}"></script>
+
+
+{% endblock %}

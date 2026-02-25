@@ -1,0 +1,1012 @@
+/* =================================================================
+   MARKETPLACE PAGE - ISOLATED STYLES
+   All classes prefixed with 'mk-' to avoid conflicts with base.css
+   Styled to match apartment_styles.css and roommates.css aesthetic
+   ================================================================= */
+
+/* ---------- Background (scoped) ---------- */
+.mk-background {
+    position: fixed;
+    inset: 0;
+    z-index: -2;
+    overflow: hidden;
+}
+
+.mk-background img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    filter: blur(4px) brightness(0.6) saturate(0.9);
+    transform: scale(1.05);
+}
+
+.mk-background::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    background: linear-gradient(
+        to bottom,
+        rgba(255, 255, 255, 0.1) 0%,
+        rgba(15, 15, 15, 0.85) 100%
+    );
+}
+
+/* ---------- Page Container ---------- */
+.mk-page-container {
+    max-width: var(--content-max);
+    margin: 0 auto;
+    padding: 20px 40px;
+    width: 100%;
+}
+
+.mk-main {
+    display: flex;
+    flex-direction: column;
+    gap: 30px;
+}
+
+/* =================================================================
+   FILTER BAR - Matches apartment page style
+   ================================================================= */
+.mk-filter-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 15px;
+    padding: 15px 25px;
+    background: rgba(20, 20, 20, 0.75);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 16px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+    flex-wrap: wrap;
+    z-index: 1;
+}
+
+.mk-filter-group-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.mk-filter-group-right {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.mk-filter-label {
+    font-weight: 700;
+    margin-right: 10px;
+    color: #fff;
+    font-size: 1.1rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* ---------- Search Input ---------- */
+.mk-search-wrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 30px;
+    padding: 4px 4px 4px 16px;
+    min-width: 280px;
+    transition: all 0.2s ease;
+}
+
+.mk-search-wrap:focus-within {
+    background: rgba(255, 255, 255, 0.12);
+    border-color: rgba(255, 255, 255, 0.3);
+}
+
+.mk-search-input {
+    flex: 1;
+    border: none;
+    outline: none;
+    background: transparent;
+    color: #fff;
+    font-size: 0.95rem;
+    padding: 8px 0;
+}
+
+.mk-search-input::placeholder {
+    color: rgba(255, 255, 255, 0.5);
+}
+
+.mk-search-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: none;
+    background: rgba(255, 255, 255, 0.15);
+    color: #fff;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+}
+
+.mk-search-btn:hover {
+    background: rgba(255, 255, 255, 0.25);
+    transform: scale(1.05);
+}
+
+/* ---------- Dropdown Styling (matches apartment) ---------- */
+.mk-dropdown {
+    position: relative;
+    display: inline-block;
+}
+
+.mk-dropdown-btn {
+    background: rgba(255, 255, 255, 0.08);
+    color: white;
+    padding: 10px 20px;
+    font-size: 14px;
+    font-weight: 600;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 30px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.mk-dropdown-btn:hover,
+.mk-dropdown.active .mk-dropdown-btn {
+    background: rgba(255, 255, 255, 0.2);
+    border-color: rgba(255, 255, 255, 0.4);
+    transform: translateY(-1px);
+}
+
+.mk-dropdown-content {
+    display: none;
+    position: absolute;
+    top: 120%;
+    left: 0;
+    background: #1a1a1a;
+    min-width: 240px;
+    max-height: 320px;
+    overflow-y: auto;
+    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 12px;
+    padding: 10px;
+    z-index: 1000;
+}
+
+.mk-dropdown-content.show {
+    display: block;
+    animation: mkFadeIn 0.2s ease;
+}
+
+@keyframes mkFadeIn {
+    from { opacity: 0; transform: translateY(-8px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.mk-dropdown-content label {
+    display: flex;
+    align-items: center;
+    padding: 10px 12px;
+    color: #e0e0e0;
+    cursor: pointer;
+    border-radius: 8px;
+    transition: background 0.2s;
+    font-size: 0.9rem;
+    user-select: none;
+    gap: 10px;
+}
+
+.mk-dropdown-content label:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
+}
+
+.mk-dropdown-content input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    accent-color: #4ade80;
+}
+
+/* Price Range Section */
+.mk-dropdown-section {
+    padding: 12px 8px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.mk-dropdown-section:last-child {
+    border-bottom: none;
+}
+
+.mk-dropdown-label {
+    display: block;
+    color: #fff;
+    font-weight: 600;
+    font-size: 0.85rem;
+    margin-bottom: 10px;
+}
+
+.mk-price-inputs {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.mk-price-inputs input {
+    flex: 1;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 8px;
+    padding: 10px 12px;
+    color: #fff;
+    font-size: 0.9rem;
+    outline: none;
+    width: 100%;
+}
+
+.mk-price-inputs input::placeholder {
+    color: rgba(255, 255, 255, 0.4);
+}
+
+.mk-price-inputs input:focus {
+    border-color: rgba(74, 222, 128, 0.5);
+}
+
+.mk-price-inputs span {
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 0.85rem;
+}
+
+/* ---------- Filter Buttons (matches apartment page) ---------- */
+.mk-clear-btn {
+    background: transparent;
+    border: 1px solid rgba(255, 100, 100, 0.5);
+    color: #ff8080;
+    padding: 10px 18px;
+    border-radius: 30px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 0.9rem;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.mk-clear-btn:hover {
+    background: rgba(255, 100, 100, 0.1);
+    color: #ffaaaa;
+}
+
+.mk-post-btn {
+    background: transparent;
+    border: 1px solid rgba(100, 255, 128, 0.5);
+    color: #4ade80;
+    padding: 10px 18px;
+    border-radius: 30px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 0.9rem;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.mk-post-btn:hover {
+    background: rgba(100, 255, 134, 0.1);
+    color: #86efac;
+    transform: translateY(-1px);
+}
+
+/* =================================================================
+   RESULTS SECTION
+   ================================================================= */
+.mk-results {
+    background: rgba(20, 20, 20, 0.6);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 20px;
+    padding: 24px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+}
+
+.mk-results-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.mk-results-header h2 {
+    margin: 0;
+    color: #fff;
+    font-size: 1.4rem;
+    font-weight: 700;
+}
+
+.mk-sort-wrap {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.mk-sort-wrap label {
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 0.9rem;
+}
+
+.mk-sort-select {
+    background: rgba(255, 255, 255, 0.08);
+    color: #fff;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 8px;
+    padding: 8px 12px;
+    font-size: 0.9rem;
+    cursor: pointer;
+    outline: none;
+    color-scheme: dark;
+}
+
+.mk-sort-select:hover,
+.mk-sort-select:focus {
+    border-color: rgba(255, 255, 255, 0.3);
+}
+
+.mk-sort-select option {
+    background: #1a1a1a;
+    color: #fff;
+}
+
+/* ---------- Grid ---------- */
+.mk-grid {
+    display: grid;
+    gap: 20px;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+}
+
+/* ---------- Item Card (matches apartment/roommate card style) ---------- */
+.mk-card {
+    background: rgba(30, 30, 30, 0.6);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 16px;
+    overflow: hidden;
+    transition: all 0.25s ease;
+    cursor: pointer;
+}
+
+.mk-card:hover {
+    border-color: rgba(255, 255, 255, 0.3);
+    transform: translateY(-4px);
+    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.4);
+}
+
+.mk-card-image {
+    width: 100%;
+    height: 180px;
+    object-fit: cover;
+    background: #222;
+}
+
+.mk-card-body {
+    padding: 16px;
+}
+
+.mk-card-title {
+    margin: 0 0 8px;
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: #fff;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.mk-card-price {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: #4ade80;
+    margin-bottom: 10px;
+}
+
+.mk-card-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 12px;
+}
+
+.mk-tag {
+    display: inline-block;
+    background: rgba(255, 255, 255, 0.1);
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    color: rgba(255, 255, 255, 0.8);
+}
+
+.mk-card-footer {
+    display: flex;
+    gap: 8px;
+}
+
+.mk-card-btn {
+    flex: 1;
+    padding: 10px 12px;
+    border: none;
+    border-radius: 10px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.mk-card-btn.primary {
+    background: linear-gradient(135deg, #4a4a4a, #2a2a2a);
+    color: #fff;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.mk-card-btn.primary:hover {
+    background: linear-gradient(135deg, #5a5a5a, #3a3a3a);
+    transform: translateY(-1px);
+}
+
+.mk-card-btn.secondary {
+    background: rgba(255, 255, 255, 0.08);
+    color: rgba(255, 255, 255, 0.9);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.mk-card-btn.secondary:hover {
+    background: rgba(255, 255, 255, 0.15);
+}
+
+/* =================================================================
+   MODAL STYLES
+   ================================================================= */
+.mk-modal {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 2000;
+    overflow-y: auto;
+}
+
+.mk-modal.active {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.mk-modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.75);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+}
+
+.mk-modal-card {
+    position: relative;
+    background: #1a1a1a;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 20px;
+    width: 90%;
+    max-width: 550px;
+    max-height: 90vh;
+    overflow: hidden;
+    box-shadow: 0 25px 60px rgba(0, 0, 0, 0.5);
+    z-index: 1;
+    animation: mkModalIn 0.3s ease;
+}
+
+@keyframes mkModalIn {
+    from {
+        opacity: 0;
+        transform: scale(0.95) translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+.mk-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 24px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.03);
+}
+
+.mk-modal-header h3 {
+    margin: 0;
+    color: #fff;
+    font-size: 1.2rem;
+    font-weight: 700;
+}
+
+.mk-modal-close {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    border: none;
+    background: rgba(255, 255, 255, 0.08);
+    color: #fff;
+    cursor: pointer;
+    display: grid;
+    place-items: center;
+    font-size: 1.2rem;
+    transition: all 0.2s;
+}
+
+.mk-modal-close:hover {
+    background: rgba(255, 80, 80, 0.2);
+    color: #ff8080;
+}
+
+.mk-modal-form {
+    padding: 24px;
+    overflow-y: auto;
+    max-height: calc(90vh - 80px);
+}
+
+/* Form Fields */
+.mk-form-field {
+    margin-bottom: 18px;
+}
+
+.mk-form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+}
+
+.mk-form-label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 600;
+    color: #fff;
+    font-size: 0.9rem;
+}
+
+.mk-modal-form input,
+.mk-modal-form select,
+.mk-modal-form textarea {
+    width: 100%;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 10px;
+    padding: 12px 14px;
+    color: #fff;
+    font-size: 0.95rem;
+    outline: none;
+    transition: all 0.2s;
+}
+
+.mk-modal-form input::placeholder,
+.mk-modal-form textarea::placeholder {
+    color: rgba(255, 255, 255, 0.4);
+}
+
+.mk-modal-form input:focus,
+.mk-modal-form select:focus,
+.mk-modal-form textarea:focus {
+    border-color: rgba(74, 222, 128, 0.5);
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.mk-modal-form textarea {
+    resize: vertical;
+    min-height: 80px;
+}
+
+.mk-modal-form select {
+    cursor: pointer;
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23ffffff' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    padding-right: 36px;
+    color-scheme: dark;
+}
+
+.mk-modal-form select option {
+    background: #1a1a1a;
+    color: #fff;
+}
+
+/* File Input */
+.mk-dropzone {
+    position: relative;
+    border: 2px dashed rgba(255, 255, 255, 0.2);
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.03);
+    transition: all 0.25s ease;
+    overflow: hidden;
+}
+
+.mk-dropzone:hover,
+.mk-dropzone.dragover {
+    border-color: rgba(74, 222, 128, 0.5);
+    background: rgba(74, 222, 128, 0.05);
+}
+
+.mk-dropzone-input {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    cursor: pointer;
+    z-index: 2;
+}
+
+.mk-dropzone-content {
+    padding: 30px 20px;
+    text-align: center;
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.mk-dropzone-content i {
+    font-size: 2rem;
+    color: rgba(74, 222, 128, 0.6);
+    margin-bottom: 10px;
+    display: block;
+}
+
+.mk-dropzone-content p {
+    margin: 0 0 4px;
+    font-size: 0.95rem;
+    color: #fff;
+}
+
+.mk-dropzone-content span {
+    font-size: 0.8rem;
+    color: rgba(255, 255, 255, 0.5);
+}
+
+.mk-dropzone-preview {
+    display: none;
+    position: relative;
+    padding: 16px;
+    justify-content: center;
+    align-items: center;
+}
+
+.mk-dropzone.has-preview .mk-dropzone-content {
+    display: none;
+}
+
+.mk-dropzone.has-preview .mk-dropzone-preview {
+    display: flex;
+}
+
+.mk-dropzone-preview img {
+    max-width: 100%;
+    max-height: 150px;
+    border-radius: 8px;
+    object-fit: cover;
+}
+
+.mk-remove-img {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    background: rgba(255, 80, 80, 0.9);
+    border: none;
+    color: #fff;
+    cursor: pointer;
+    display: grid;
+    place-items: center;
+    transition: all 0.2s;
+    z-index: 3;
+}
+
+.mk-remove-img:hover {
+    background: #ff4444;
+    transform: scale(1.1);
+}
+
+/* Submit Button */
+.mk-submit-btn {
+    width: 100%;
+    padding: 14px 24px;
+    border: none;
+    border-radius: 12px;
+    font-size: 1rem;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 8px;
+    background: linear-gradient(135deg, #4a4a4a, #2a2a2a);
+    color: #fff;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+    transition: all 0.2s;
+}
+
+.mk-submit-btn:hover {
+    background: linear-gradient(135deg, #5a5a5a, #3a3a3a);
+    transform: translateY(-2px);
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.4);
+}
+
+/* =================================================================
+   DETAIL MODAL
+   ================================================================= */
+.mk-modal-card.detail {
+    max-width: 800px;
+}
+
+.mk-detail-layout {
+    display: flex;
+    gap: 24px;
+}
+
+.mk-detail-image {
+    flex: 1;
+    min-width: 280px;
+}
+
+.mk-detail-image img {
+    width: 100%;
+    height: auto;
+    max-height: 350px;
+    object-fit: cover;
+    border-radius: 12px;
+    background: #222;
+}
+
+.mk-detail-info {
+    flex: 1.2;
+}
+
+.mk-detail-title {
+    margin: 0 0 8px;
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: #fff;
+}
+
+.mk-detail-price {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #4ade80;
+    margin-bottom: 16px;
+}
+
+.mk-detail-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 20px;
+}
+
+.mk-detail-tag {
+    display: inline-block;
+    background: rgba(74, 222, 128, 0.15);
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    color: #4ade80;
+}
+
+.mk-detail-section-title {
+    font-size: 1rem;
+    color: rgba(255, 255, 255, 0.7);
+    margin: 16px 0 8px;
+    font-weight: 600;
+}
+
+.mk-detail-description {
+    color: rgba(255, 255, 255, 0.85);
+    line-height: 1.6;
+    font-size: 0.95rem;
+    margin-bottom: 20px;
+}
+
+.mk-detail-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.mk-detail-btn {
+    width: 100%;
+    padding: 12px 20px;
+    border: none;
+    border-radius: 10px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.mk-detail-btn.primary {
+    background: linear-gradient(135deg, #4a4a4a, #2a2a2a);
+    color: #fff;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.mk-detail-btn.primary:hover {
+    background: linear-gradient(135deg, #5a5a5a, #3a3a3a);
+    transform: translateY(-1px);
+}
+
+.mk-detail-btn.secondary {
+    background: rgba(255, 255, 255, 0.08);
+    color: rgba(255, 255, 255, 0.9);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.mk-detail-btn.secondary:hover {
+    background: rgba(255, 255, 255, 0.15);
+}
+
+/* No Results */
+.mk-no-results {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 60px 20px;
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.mk-no-results i {
+    font-size: 3rem;
+    color: rgba(255, 255, 255, 0.3);
+    margin-bottom: 16px;
+}
+
+.mk-no-results p {
+    margin: 0;
+    font-size: 1.1rem;
+}
+
+/* =================================================================
+   RESPONSIVE DESIGN
+   ================================================================= */
+@media (max-width: 1100px) {
+    .mk-page-container {
+        padding: 20px;
+    }
+}
+
+@media (max-width: 900px) {
+    .mk-filter-bar {
+        padding: 15px;
+    }
+    
+    .mk-filter-group-left,
+    .mk-filter-group-right {
+        width: 100%;
+        justify-content: center;
+    }
+    
+    .mk-filter-label {
+        width: 100%;
+        justify-content: center;
+        margin-right: 0;
+        margin-bottom: 8px;
+    }
+    
+    .mk-search-wrap {
+        width: 100%;
+        min-width: unset;
+    }
+    
+    .mk-detail-layout {
+        flex-direction: column;
+    }
+    
+    .mk-detail-image {
+        min-width: unset;
+    }
+}
+
+@media (max-width: 768px) {
+    .mk-page-container {
+        padding: 12px;
+    }
+    
+    .mk-filter-bar {
+        border-radius: 12px;
+    }
+    
+    .mk-grid {
+        grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    }
+    
+    .mk-results-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .mk-sort-wrap {
+        width: 100%;
+    }
+    
+    .mk-sort-select {
+        flex: 1;
+    }
+    
+    .mk-modal-card {
+        margin: 20px 0;
+        border-radius: 16px;
+    }
+    
+    .mk-form-row {
+        grid-template-columns: 1fr;
+    }
+    
+    .mk-modal-form {
+        padding: 16px;
+    }
+}
+
+@media (max-width: 480px) {
+    .mk-filter-group-left {
+        flex-direction: column;
+    }
+    
+    .mk-dropdown-btn {
+        width: 100%;
+        justify-content: center;
+    }
+    
+    .mk-dropdown-content {
+        left: 50%;
+        transform: translateX(-50%);
+        width: calc(100vw - 40px);
+        max-width: 300px;
+    }
+    
+    .mk-filter-group-right {
+        flex-direction: column;
+        width: 100%;
+    }
+    
+    .mk-clear-btn,
+    .mk-post-btn {
+        width: 100%;
+        justify-content: center;
+    }
+    
+    .mk-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .mk-modal-header {
+        padding: 16px;
+    }
+}
+
+/* Prevent body scroll when modal open */
+body.mk-modal-open {
+    overflow: hidden;
+}

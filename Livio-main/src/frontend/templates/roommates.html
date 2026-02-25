@@ -1,0 +1,238 @@
+{% extends "base_home.html" %}
+{% load static %}
+{% block content %}
+<link rel="stylesheet" href="{% static 'css/roommates.css'%}">
+
+<!-- Background only for page body -->
+<div class="rm-background" aria-hidden="true">
+  <img src="{% static 'images/bg_roommates.png' %}" alt="" />
+</div>
+
+<div class="rm-page-container">
+  <main class="rm-main">
+    <!-- Filter Bar - Similar to Apartment Page -->
+    <section class="rm-filter-bar">
+      <div class="rm-filter-group-left">
+        <div class="rm-filter-label"><i class="fa-solid fa-sliders"></i> Filters:</div>
+
+        <!-- Budget Dropdown -->
+        <div class="rm-dropdown" id="budgetDropdown">
+          <button class="rm-dropdown-btn" type="button" onclick="toggleRmDropdown('budgetDropdown')">
+            Budget <i class="fa-solid fa-chevron-down"></i>
+          </button>
+          <div class="rm-dropdown-content">
+            <div class="rm-dropdown-section">
+              <label class="rm-dropdown-label">Type</label>
+              <div class="rm-rent-toggle">
+                <label class="rm-toggle-option">
+                  <input type="radio" name="rentMode" value="per" checked />
+                  <span>Per Person</span>
+                </label>
+                <label class="rm-toggle-option">
+                  <input type="radio" name="rentMode" value="total" />
+                  <span>Total Rent</span>
+                </label>
+              </div>
+            </div>
+            <div class="rm-dropdown-section">
+              <label class="rm-dropdown-label">Range: $<span id="rmMinVal">0</span> - $<span id="rmMaxVal">10000</span></label>
+              <div class="rm-range-slider-wrap">
+                <div class="rm-range-slider-track"></div>
+                <div class="rm-range-slider-range" id="rmSliderRange"></div>
+                <input type="range" id="rmSliderMin" class="rm-range-input rm-range-min" min="0" max="10000" step="50" value="0" />
+                <input type="range" id="rmSliderMax" class="rm-range-input rm-range-max" min="0" max="10000" step="50" value="10000" />
+              </div>
+              <div class="rm-range-inputs">
+                <input type="number" id="rmBudgetMin" placeholder="Min" min="0" max="10000" value="0" />
+                <span>to</span>
+                <input type="number" id="rmBudgetMax" placeholder="Max" min="0" max="10000" value="10000" />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Gender Dropdown -->
+        <div class="rm-dropdown" id="genderDropdown">
+          <button class="rm-dropdown-btn" type="button" onclick="toggleRmDropdown('genderDropdown')">
+            Gender <i class="fa-solid fa-chevron-down"></i>
+          </button>
+          <div class="rm-dropdown-content">
+            <label><input type="radio" name="gender" value="Any" checked /> Any</label>
+            <label><input type="radio" name="gender" value="Female" /> Female</label>
+            <label><input type="radio" name="gender" value="Male" /> Male</label>
+            <label><input type="radio" name="gender" value="Non-binary" /> Non-binary</label>
+          </div>
+        </div>
+
+        <!-- Lifestyle Dropdown -->
+        <div class="rm-dropdown" id="lifestyleDropdown">
+          <button class="rm-dropdown-btn" type="button" onclick="toggleRmDropdown('lifestyleDropdown')">
+            Lifestyle <i class="fa-solid fa-chevron-down"></i>
+          </button>
+          <div class="rm-dropdown-content">
+            <label><input type="checkbox" value="Student" /> Student</label>
+            <label><input type="checkbox" value="Pet-friendly" /> Pet-friendly</label>
+            <label><input type="checkbox" value="No-smoking" /> No-smoking</label>
+            <label><input type="checkbox" value="Quiet" /> Quiet</label>
+            <label><input type="checkbox" value="Night owl" /> Night owl</label>
+            <label><input type="checkbox" value="Early bird" /> Early bird</label>
+            <label><input type="checkbox" value="Vegetarian" /> Vegetarian</label>
+            <label><input type="checkbox" value="Gym" /> Gym</label>
+          </div>
+        </div>
+
+        <!-- Move-in Date -->
+        <div class="rm-filter-input-wrap">
+          <input id="rmMoveIn" type="date" class="rm-filter-input rm-date-input" />
+        </div>
+      </div>
+
+      <div class="rm-filter-group-right">
+        <button class="rm-clear-btn" onclick="clearRmFilters()">
+          <i class="fa-solid fa-rotate-left"></i> Clear
+        </button>
+        <button class="rm-post-btn" onclick="openRmModal()">
+          <i class="fa-solid fa-user-plus"></i> Post Profile
+        </button>
+      </div>
+    </section>
+
+    <!-- Results Section -->
+    <section class="rm-results">
+      <div class="rm-results-header">
+        <h2>Find a Roommate</h2>
+        <div class="rm-sort-wrap">
+          <label for="rmSort">Sort:</label>
+          <select id="rmSort" class="rm-sort-select">
+            <option value="recent">Most Recent</option>
+            <option value="budgetLow">Budget: Low → High</option>
+            <option value="budgetHigh">Budget: High → Low</option>
+            <option value="moveIn">Earliest Move-in</option>
+          </select>
+        </div>
+      </div>
+      <div id="rmGrid" class="rm-grid"></div>
+    </section>
+  </main>
+</div>
+
+<!-- Post Profile Modal -->
+<div id="rmModal" class="rm-modal" role="dialog" aria-modal="true">
+  <div class="rm-modal-overlay" onclick="closeRmModal()"></div>
+  <div class="rm-modal-card">
+    <div class="rm-modal-header">
+      <h3>Create Your Roommate Profile</h3>
+      <button class="rm-modal-close" onclick="closeRmModal()" aria-label="Close">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+    
+    <form id="rmForm" class="rm-modal-form">
+      <!-- Avatar Drop Zone -->
+      <div class="rm-form-section">
+        <label class="rm-form-label">Profile Photo</label>
+        <div class="rm-dropzone" id="rmDropzone">
+          <input type="file" id="fAvatar" accept="image/*" class="rm-dropzone-input" />
+          <div class="rm-dropzone-content" id="rmDropzoneContent">
+            <i class="fa-solid fa-cloud-arrow-up"></i>
+            <p>Drag & drop your photo here</p>
+            <span>or click to browse</span>
+          </div>
+          <div class="rm-dropzone-preview" id="rmDropzonePreview">
+            <img id="rmPreviewImg" src="" alt="Preview" />
+            <button type="button" class="rm-remove-img" onclick="removeRmImage()">
+              <i class="fa-solid fa-trash"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="rm-form-row">
+        <div class="rm-form-field">
+          <label class="rm-form-label">Full Name *</label>
+          <input id="fName" type="text" required placeholder="e.g., John Doe" />
+        </div>
+        <div class="rm-form-field">
+          <label class="rm-form-label">Age</label>
+          <input id="fAge" type="number" min="16" max="120" placeholder="22" />
+        </div>
+      </div>
+
+      <div class="rm-form-row">
+        <div class="rm-form-field">
+          <label class="rm-form-label">School / Company</label>
+          <input id="fSchool" type="text" placeholder="CSUN" />
+        </div>
+        <div class="rm-form-field">
+          <label class="rm-form-label">Gender</label>
+          <select id="fGender">
+            <option value="Prefer not to say" selected>Prefer not to say</option>
+            <option value="Female">Female</option>
+            <option value="Male">Male</option>
+            <option value="Non-binary">Non-binary</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="rm-form-row">
+        <div class="rm-form-field">
+          <label class="rm-form-label">City</label>
+          <input id="fCity" type="text" placeholder="Northridge, CA" />
+        </div>
+        <div class="rm-form-field">
+          <label class="rm-form-label">Move-in Date</label>
+          <input id="fMoveIn" type="date" />
+        </div>
+      </div>
+
+      <div class="rm-form-row">
+        <div class="rm-form-field">
+          <label class="rm-form-label">Budget Min ($)</label>
+          <input id="fBudgetMin" type="number" min="0" placeholder="700" />
+        </div>
+        <div class="rm-form-field">
+          <label class="rm-form-label">Budget Max ($)</label>
+          <input id="fBudgetMax" type="number" min="0" placeholder="1200" />
+        </div>
+        <div class="rm-form-field">
+          <label class="rm-form-label">Budget Type</label>
+          <select id="fBudgetType">
+            <option value="per" selected>Per Person</option>
+            <option value="total">Total Rent</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="rm-form-field rm-form-full">
+        <label class="rm-form-label">About You *</label>
+        <textarea id="fBio" rows="3" placeholder="Short bio, schedule, expectations..." required></textarea>
+      </div>
+
+      <div class="rm-form-field rm-form-full">
+        <label class="rm-form-label">Lifestyle Preferences</label>
+        <div class="rm-form-checkboxes">
+          <label><input type="checkbox" value="Student" /> Student</label>
+          <label><input type="checkbox" value="Pet-friendly" /> Pet-friendly</label>
+          <label><input type="checkbox" value="No-smoking" /> No-smoking</label>
+          <label><input type="checkbox" value="Quiet" /> Quiet</label>
+          <label><input type="checkbox" value="Night owl" /> Night owl</label>
+          <label><input type="checkbox" value="Early bird" /> Early bird</label>
+          <label><input type="checkbox" value="Vegetarian" /> Vegetarian</label>
+          <label><input type="checkbox" value="Gym" /> Gym</label>
+        </div>
+      </div>
+
+      <div class="rm-form-field rm-form-full">
+        <label class="rm-form-label">Contact (Email or Phone)</label>
+        <input id="fContact" type="text" placeholder="you@email.com or (818) 555-0123" />
+      </div>
+
+      <button type="submit" class="rm-submit-btn">
+        <i class="fa-solid fa-paper-plane"></i> Post Profile
+      </button>
+    </form>
+  </div>
+</div>
+
+<script src="{% static 'js/roommates_handling.js' %}"></script>
+{% endblock %}

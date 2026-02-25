@@ -1,0 +1,282 @@
+{% extends "base_home.html" %}
+{% load static %}
+{% block content %}
+<link rel="stylesheet" href="{% static 'css/profile_page.css' %}">
+
+<!-- Background -->
+<div class="profile-background" aria-hidden="true">
+  <img src="{% static 'images/bg2.jpg' %}" alt="" />
+</div>
+
+<div class="profile-page-container">
+  <main class="profile-main">
+
+    <!-- Profile Header Card -->
+    <section class="profile-header-card">
+      <div class="profile-avatar-section">
+        <div class="profile-avatar-wrapper">
+          <img id="profileAvatar"
+            src="https://ui-avatars.com/api/?name=User&background=2a2a2a&color=4ade80&size=200&bold=true"
+            alt="Profile Avatar" class="profile-avatar" />
+          <label class="profile-avatar-upload" for="avatarInput">
+            <i class="fa-solid fa-camera"></i>
+            <input type="file" id="avatarInput" accept="image/*" hidden />
+          </label>
+        </div>
+        <div class="profile-name-section">
+          <h1 id="profileDisplayName">Welcome!</h1>
+          <p id="profileTagline" class="profile-tagline">Complete your profile to get started</p>
+        </div>
+      </div>
+      <div class="profile-stats">
+        <div class="profile-stat">
+          <span class="stat-value" id="statPosts">0</span>
+          <span class="stat-label">RoommatePosts</span>
+        </div>
+        <div class="profile-stat">
+          <span class="stat-value" id="statInterested">21</span>
+          <span class="stat-label">Interested</span>
+        </div>
+        <div class="profile-stat">
+          <span class="stat-value" id="statConnections">0</span>
+          <span class="stat-label">Connections</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Profile Content Grid -->
+    <div class="profile-content-grid">
+
+      <!-- Left Column - Profile Info -->
+      <section class="profile-info-card">
+        <div class="card-header">
+          <h2><i class="fa-solid fa-user"></i> Personal Information</h2>
+          <button type="button" class="edit-btn" id="editProfileBtn">
+            <i class="fa-solid fa-pen"></i> Edit
+          </button>
+        </div>
+
+        <form id="profileForm" class="profile-form">
+          <div class="form-row">
+            <div class="form-field">
+              <label for="firstName">First Name *</label>
+              <input type="text" id="firstName" name="firstName" placeholder="Enter first name" required disabled />
+            </div>
+            <div class="form-field">
+              <label for="lastName">Last Name *</label>
+              <input type="text" id="lastName" name="lastName" placeholder="Enter last name" required disabled />
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-field">
+              <label for="age">Age *</label>
+              <input type="number" id="age" name="age" min="16" max="120" placeholder="21" required/>
+            </div>
+            <div class="form-field">
+              <label for="gender">Gender *</label>
+              <select id="gender" name="gender" required disabled>
+                <option value="">Select gender</option>
+                <option value="M">Male</option>
+                <option value="F">Female</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-field">
+              <label for="gradeLevel">Grade Level *</label>
+              <select id="gradeLevel" name="gradeLevel" required disabled>
+                <option value="">Select grade level</option>
+              </select>
+            </div>
+            <div class="form-field">
+              <label for="nationality">Nationality *</label>
+              <select id="nationality" name="nationality" required disabled>
+                <option value="">Select nationality</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-field full-width">
+            <label for="bio">Bio *</label>
+            <textarea id="bio" name="bio" rows="4" placeholder="Tell us about yourself..." required disabled></textarea>
+          </div>
+
+          <div class="form-actions" id="formActions" style="display: none;">
+            <button type="button" class="btn-secondary" id="cancelEditBtn">Cancel</button>
+            <button type="submit" class="btn-primary" id="saveProfileBtn">
+              <i class="fa-solid fa-save"></i> Save Changes
+            </button>
+          </div>
+        </form>
+      </section>
+
+      <!-- Right Column -->
+      <div class="profile-right-column">
+
+        <!-- Quick Actions Card -->
+        <section class="profile-actions-card">
+          <h2><i class="fa-solid fa-bolt"></i> Quick Actions</h2>
+          <div class="action-buttons">
+            <button type="button" class="action-btn" id="createRoommatePostBtn">
+              <i class="fa-solid fa-user-plus"></i>
+              <span>Create Roommate Post</span>
+            </button>
+            <button type="button" class="action-btn" id="viewRoommatePostBtn" style="display: none;">
+              <i class="fa-solid fa-eye"></i>
+              <span>View My Roommate Post</span>
+            </button>
+            <a href="{% url 'apartments:apartment-list-page' %}" class="action-btn">
+              <i class="fa-solid fa-building"></i>
+              <span>Browse Apartments</span>
+            </a>
+            <a href="{% url 'roommates' %}" class="action-btn">
+              <i class="fa-solid fa-users"></i>
+              <span>Find Roommates</span>
+            </a>
+          </div>
+        </section>
+
+        <!-- Account Info Card -->
+        <section class="profile-account-card">
+          <h2><i class="fa-solid fa-shield-halved"></i> Account</h2>
+          <div class="account-info">
+            <div class="account-row">
+              <span class="account-label">Email</span>
+              <span class="account-value" id="accountEmail">-</span>
+            </div>
+            <div class="account-row">
+              <span class="account-label">Username</span>
+              <span class="account-value" id="accountUsername">-</span>
+            </div>
+            <div class="account-row">
+              <span class="account-label">Member Since</span>
+              <span class="account-value" id="accountJoinDate">-</span>
+            </div>
+          </div>
+          <button type="button" class="logout-btn" id="logoutBtn">
+            <i class="fa-solid fa-right-from-bracket"></i> Logout
+          </button>
+        </section>
+
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- Create Roommate Post Modal -->
+<div id="roommatePostModal" class="profile-modal" role="dialog" aria-modal="true">
+  <div class="profile-modal-overlay" onclick="closeRoommateModal()"></div>
+  <div class="profile-modal-card">
+    <div class="profile-modal-header">
+      <h3><i class="fa-solid fa-user-plus"></i> Create Roommate Post</h3>
+      <button class="profile-modal-close" onclick="closeRoommateModal()" aria-label="Close">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+
+    <form id="roommatePostForm" class="profile-modal-form">
+      <p class="form-notice">
+        <i class="fa-solid fa-info-circle"></i>
+        Your profile info will be automatically included in your roommate post.
+      </p>
+
+      <div class="form-field">
+        <label for="postTitle">Post Title *</label>
+        <input type="text" id="postTitle" name="title" placeholder="e.g., Looking for a roommate near CSUN" required />
+      </div>
+
+      <div class="form-field">
+        <label for="postDescription">Description *</label>
+        <textarea id="postDescription" name="description" rows="3"
+          placeholder="Describe what you're looking for in a roommate..." required></textarea>
+      </div>
+
+      <div class="form-row">
+        <div class="form-field">
+          <label for="postBudget">Monthly Budget ($) *</label>
+          <input type="number" id="postBudget" name="budget" min="0" placeholder="1200" required />
+        </div>
+        <div class="form-field">
+          <label for="postMoveIn">Move-in Date *</label>
+          <input type="date" id="postMoveIn" name="moveInDate" required />
+        </div>
+      </div>
+
+      <div class="form-field">
+        <label for="postFunFact">Fun Fact About You *</label>
+        <textarea id="postFunFact" name="funFact" rows="2" placeholder="Share something interesting about yourself!"
+          required></textarea>
+      </div>
+
+      <div class="form-field">
+        <label>Lifestyle Preferences</label>
+        <div class="checkbox-grid">
+          <label class="checkbox-item">
+            <input type="checkbox" name="features" value="Student" />
+            <span>Student</span>
+          </label>
+          <label class="checkbox-item">
+            <input type="checkbox" name="features" value="Pet-friendly" />
+            <span>Pet-friendly</span>
+          </label>
+          <label class="checkbox-item">
+            <input type="checkbox" name="features" value="No-smoking" />
+            <span>No-smoking</span>
+          </label>
+          <label class="checkbox-item">
+            <input type="checkbox" name="features" value="Quiet" />
+            <span>Quiet</span>
+          </label>
+          <label class="checkbox-item">
+            <input type="checkbox" name="features" value="Night owl" />
+            <span>Night owl</span>
+          </label>
+          <label class="checkbox-item">
+            <input type="checkbox" name="features" value="Early bird" />
+            <span>Early bird</span>
+          </label>
+          <label class="checkbox-item">
+            <input type="checkbox" name="features" value="Vegetarian" />
+            <span>Vegetarian</span>
+          </label>
+          <label class="checkbox-item">
+            <input type="checkbox" name="features" value="Gym" />
+            <span>Gym</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="form-actions">
+        <button type="button" class="btn-secondary" onclick="closeRoommateModal()">Cancel</button>
+        <button type="submit" class="btn-primary">
+          <i class="fa-solid fa-paper-plane"></i> Create Post
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- View Roommate Post Modal -->
+<div id="viewRoommatePostModal" class="profile-modal" role="dialog" aria-modal="true">
+  <div class="profile-modal-overlay" onclick="closeViewRoommateModal()"></div>
+  <div class="profile-modal-card">
+    <div class="profile-modal-header">
+      <h3><i class="fa-solid fa-eye"></i> Your Roommate Post</h3>
+      <button class="profile-modal-close" onclick="closeViewRoommateModal()" aria-label="Close">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+    <div id="roommatePostContent" class="roommate-post-content">
+      <!-- Content will be populated by JavaScript -->
+    </div>
+  </div>
+</div>
+
+<!-- Toast Notification -->
+<div id="toast" class="toast"></div>
+
+<script src="{% static 'js/profile.js' %}"></script>
+{% endblock %}

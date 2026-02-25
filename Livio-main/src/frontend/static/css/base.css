@@ -1,0 +1,303 @@
+/* ---------- Setup ---------- */
+:root {
+  --header-h: 80px;
+  --search-h: 70px;
+  --top-spacing: calc(var(--header-h) + var(--search-h) + 20px);
+
+  --glass-bg: rgba(20, 20, 20, 0.65);
+  --glass-border: rgba(255, 255, 255, 0.15);
+  --accent-color: #13181531;
+  --text-main: #ffffff;
+  --text-muted: #cccccc;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: "Poppins", system-ui, -apple-system, sans-serif;
+  color: var(--text-main);
+  background: #050505;
+  padding-top: var(--top-spacing);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ---------- Aesthetic Header ---------- */
+header {
+  position: fixed !important;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  height: var(--header-h);
+
+  display: flex;
+  align-items: center;
+  padding: 0 clamp(20px, 5vw, 64px);
+
+  background: var(--glass-bg);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+}
+
+.logo p {
+  margin: 0;
+  font-family: "Alan Sans", sans-serif;
+  font-weight: 900;
+  font-size: 2rem;
+  letter-spacing: 1px;
+  color: #fff;
+}
+
+.trademark-icon {
+  font-size: 0.4em;
+  vertical-align: super;
+  opacity: 0.8;
+}
+
+/* Navigation Chips */
+nav {
+  margin-left: auto !important;
+  display: flex;
+  gap: 15px;
+}
+
+nav .chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-radius: 50px;
+  background: rgba(255, 255, 255, 0.05);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  text-decoration: none;
+  font-size: 0.9rem;
+  font-weight: 600;
+  transition: all 0.3s ease;
+}
+
+nav .chip:hover {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.4);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+/* ---------- Aesthetic Search Box ---------- */
+.search-box {
+  position: fixed;
+  /* Default State (Top Center) */
+  top: calc(var(--header-h) + 15px);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 900;
+
+  width: min(600px, 90vw);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+
+  background: rgba(30, 30, 30, 0.8);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--glass-border);
+  border-radius: 50px;
+  padding: 8px 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+
+  transition: all 0.45s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+/* MINIMIZED STATE (Bottom Right) */
+.search-box.minimized {
+  width: 50px;
+  height: 50px;
+  padding: 0;
+
+  /* Reset Top/Left positioning */
+  top: auto;
+  left: auto;
+  transform: none;
+
+  /* New Fixed Position (JS may override 'bottom' for footer collision) */
+  bottom: 30px;
+  right: 30px;
+
+  background: rgba(31, 39, 35, 0.332);
+  /* Accent color for visibility */
+  border-color: rgba(255, 255, 255, 0.4);
+  justify-content: center;
+  gap: 0;
+  cursor: pointer;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
+}
+
+.search-box:focus-within {
+  transform: translateX(-50%) scale(1.02);
+  border-color: rgba(255, 255, 255, 0.3);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+}
+
+.search-box input {
+  flex: 1;
+  padding: 10px 15px;
+  border: none;
+  background: transparent;
+  color: #fff;
+  font-size: 1rem;
+  outline: none;
+  transition: all 0.3s ease;
+  opacity: 1;
+  width: 100%;
+}
+
+/* Hide input when minimized */
+.search-box.minimized input {
+  width: 0;
+  padding: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.search-box button {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: none;
+  background: #fff;
+  color: #000;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+/* Change icon style when minimized */
+.search-box.minimized button {
+  background: transparent;
+  color: #ffffff;
+  width: 100%;
+  height: 100%;
+  transform: scale(1.4);
+}
+
+.search-box button:hover {
+  transform: scale(1.1);
+}
+
+/* Search Results Dropdown */
+.search-results {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  margin-top: 10px;
+  background: rgba(20, 20, 30, 0.98);
+  border: 1px solid var(--glass-border);
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  z-index: 1000;
+}
+
+.search-box.minimized .search-results {
+  display: none !important;
+}
+
+
+/* ---------- Footer ---------- */
+footer {
+  margin-top: auto;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 60px 80px;
+  background: #05050500;
+  color: #fff;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+footer>div {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.logo-format-name {
+  font-size: 5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  font-family: "Alan Sans", sans-serif;
+}
+
+.logo-format {
+  font-size: 2rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  font-family: "Alan Sans", sans-serif;
+}
+
+.Livio {
+  font-family: "Alan Sans", sans-serif;
+  font-size: 2rem;
+  line-height: 1;
+}
+
+.vista {
+  text-align: center;
+  margin-top: 1px;
+  font-family: "Alan Sans", sans-serif;
+  opacity: .85;
+}
+
+.quick-links,
+.contact-info {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  text-align: center;
+}
+
+.quick-links p,
+.contact-info p {
+  margin: 0 0 10px;
+  color: #fff;
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: .6px;
+}
+
+.quick-links a,
+.contact-info a {
+  color: #e5e7eb;
+  text-decoration: none;
+  font-size: 1rem;
+  line-height: 1.6;
+}
+
+.quick-links a:hover,
+.contact-info a:hover {
+  text-decoration: underline;
+  text-shadow: #e1d4d432 0 0 8px;
+}
+
+.quick-links .indent {
+  padding-left: 0 !important;
+}

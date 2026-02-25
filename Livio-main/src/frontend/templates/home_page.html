@@ -1,0 +1,68 @@
+{% extends "base_home.html" %}
+{% load static %}
+{% block content %}
+<link rel="stylesheet" href="{% static 'css/home_styles.css' %}">
+
+<!-- Background -->
+<div class="background">
+  <img src="{% static 'images/bg2.jpg' %}" alt="" aria-hidden="true" />
+</div>
+
+<main class="main-content">
+
+  <!-- Sections -->
+  <section class="boxes-container">
+    <div class="hero-box">
+      <div class="hero-text">
+        <h1>Welcome to Livio!</h1>
+        <p>A student first platform for smarter learning and better living. Discover guidance, housing, and essentials — all in one place.</p>
+      </div>
+    </div>
+
+    <div class="box4">
+      <div class="feature-card">
+          <i class="fa-solid fa-house-chimney fa-5x feature-icon"></i>
+          <h3>Find Housing</h3>
+          <p>Discover listings and roommates matched to your needs.</p>
+          <a class="rooms-btn" href="{% url 'apartment' %}">Apartments</a>
+        </div>
+      <div class="feature-cards">
+        <div class="feature-card">
+          <i class="fa-solid fa-cart-arrow-down fa-5x feature-icon"></i>
+          <h3>Marketplace</h3>
+          <p>Structured prompts and feedback help you retain more.</p>
+          <a class="rooms-btn" href="{% url 'marketplace' %}">Marketplace</a>
+        </div>
+        <div class="feature-card">
+          <i class="fa-solid fa-person fa-5x feature-icon"></i>
+          <h3>Find Roommates</h3>
+          <p>Discover listings and roommates matched to your needs.</p>
+          <a class="rooms-btn" href="{% url 'roommates' %}">Roommates</a>
+        </div>
+      </div>
+    </div> 
+
+    <div class="box2">
+
+      <div class="box2-text">
+        <p>Join clubs, track progress, and get tailored guidance. Livio connects your learning and living so you can focus on what matters most.</p>
+      </div>
+    </div>
+
+    <div class="box3">
+      <div class="box3text">
+        <h1>"Learn. Live. Connect. With Livio."</h1>
+        <p>From AI mentorship to community discovery, Livio supports your journey — on campus and beyond.</p>
+      </div>
+    </div>
+
+    <div class="box5-box">
+
+      <div class="box5-text">
+        <h1>“Explore your campus life with Livio”</h1>
+        <p>Clubs, events, and resources tailored for you.</p>
+      </div>
+    </div>
+  </section>
+</main>
+{% endblock %}

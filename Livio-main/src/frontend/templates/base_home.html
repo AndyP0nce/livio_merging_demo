@@ -1,0 +1,399 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Livio — Home</title>
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css"
+        crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Alan+Sans:wght@700;900&family=Poppins:wght@400;600;700&display=swap"
+        rel="stylesheet" />
+
+    <link rel="stylesheet" href="{% static 'css/base.css' %}">
+      {% block styles %}{% endblock %} 
+</head>
+
+<body data-page="{% block page_identifier %}home{% endblock %}">
+
+    <header class="home-header">
+        <div class="logo" aria-label="Livio">
+            <p>Livio<span class="trademark-icon">&trade;</span></p>
+        </div>
+
+  <nav class="home-nav" aria-label="Primary">
+    <a class="chip" href="{% url 'marketplace' %}">
+      <i class="fa-solid fa-store" aria-hidden="true"></i><span>Marketplace</span>
+    </a>
+    <a class="chip" href="{% url 'apartment' %}">
+      <i class="fa-solid fa-building" aria-hidden="true"></i><span>Apartments</span>
+    </a>
+    <a class="chip" href="{% url 'roommates' %}">
+      <i class="fa-solid fa-person" aria-hidden="true"></i><span>Roommates</span>
+    </a>
+    <a class="chip" href="{% url 'home' %}" aria-current="page">
+      <i class="fa-solid fa-home" aria-hidden="true"></i><span>Home</span>
+    </a>
+    
+    <!-- Auth-dependent navigation -->
+    <a class="chip auth-link" id="signupLink" href="{% url 'signup' %}">
+      <i class="fa-solid fa-user-plus" aria-hidden="true"></i><span>Sign Up</span>
+    </a>
+    <a class="chip auth-link" id="signinLink" href="{% url 'login' %}">
+      <i class="fa-solid fa-right-to-bracket" aria-hidden="true"></i><span>Sign In</span>
+    </a>
+    <a class="chip auth-link" id="profileLink" href="{% url 'newProfile' %}" style="display: none;">
+      <i class="fa-solid fa-user" aria-hidden="true"></i><span>Profile</span>
+    </a>
+  </nav>
+</header>
+
+    <section class="search-box">
+        <input type="text" id="globalSearchInput" placeholder="Search..." aria-label="Search Livio" />
+        <button type="button" id="globalSearchBtn"><i class="fa-solid fa-magnifying-glass"></i></button>
+        <div class="search-results" id="searchResults" style="display: none;"></div>
+    </section>
+
+    {% block content %}{% endblock %}
+
+    <footer id="mainFooter">
+        <div class="logo-format-name">
+            <p>Livio<span class="trademark-icon">&trade;</span></p>
+        </div>
+        <div class="logo-format">
+            <p class="vista">Helping students <br>Learn smarter,<br>Live better, and <br>Connect deeper</p>
+        </div>
+        <hr />
+        <div class="quick-links">
+            <p>QUICK LINKS</p>
+            <a href="{% url 'home' %}" class="indent">Home</a>
+            <a href="{% url 'signup' %}" class="indent">Sign-Up</a>
+            <a href="{% url 'login' %}" class="indent">Sign-In</a>
+            <a href="{% url 'profile' %}" class="indent">Profile</a>
+            <a href="#" class="indent">Resources</a>
+        </div>
+        <hr />
+        <div class="contact-info">
+            <p>CONTACT INFO</p>
+            <a href="mailto:hello@livio.app"><i class="fa-solid fa-envelope"></i>
+                <p>hello@livio.app</p>
+            </a>
+            <a href="tel:818-000-0000"><i class="fa-solid fa-phone"></i>
+                <p>Call 818-000-0000</p>
+            </a>
+            <a href="#" class="indent">Terms &amp; Conditions</a>
+            <a href="#" class="indent">Privacy Policy</a>
+        </div>
+    </footer>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            const searchBox = document.querySelector('.search-box');
+            const searchInput = document.getElementById('globalSearchInput');
+            const searchBtn = document.getElementById('globalSearchBtn');
+            const searchResults = document.getElementById('searchResults');
+            const footer = document.getElementById('mainFooter');
+            const currentPage = document.body.getAttribute('data-page');
+
+            let searchTimeout;
+
+            // Check authentication state and update navigation
+            const accessToken = localStorage.getItem('access_token');
+            const signupLink = document.getElementById('signupLink');
+            const signinLink = document.getElementById('signinLink');
+            const profileLink = document.getElementById('profileLink');
+
+            if (accessToken) {
+                // User is logged in
+                if (signupLink) signupLink.style.display = 'none';
+                if (signinLink) signinLink.style.display = 'none';
+                if (profileLink) profileLink.style.display = 'flex';
+            } else {
+                // User is not logged in
+                if (signupLink) signupLink.style.display = 'flex';
+                if (signinLink) signinLink.style.display = 'flex';
+                if (profileLink) profileLink.style.display = 'none';
+            }
+
+            // Search functionality
+            function performSearch(query, isSubmission = false) {
+                // Allow empty query to clear results/show all
+                const searchQuery = query ? query.trim() : '';
+
+                // Determine which endpoint to use based on current page
+                let endpoint = '/api/search/';
+                let params = new URLSearchParams({ q: searchQuery });
+
+                if (currentPage === 'apartments') {
+                    endpoint = '/apartments/api/apartments/';
+                    params = new URLSearchParams({ search: searchQuery });
+
+                    // Update URL ONLY if explicit submission (Enter or Click)
+                    if (isSubmission) {
+                        const newUrl = new URL(window.location);
+                        if (searchQuery) {
+                            newUrl.searchParams.set('search', searchQuery);
+                        } else {
+                            newUrl.searchParams.delete('search');
+                        }
+                        window.history.pushState({}, '', newUrl);
+                    }
+                } else if (currentPage === 'marketplace') {
+                    endpoint = '/api/marketplace/';
+                    params = new URLSearchParams({ search: searchQuery });
+                } else if (currentPage === 'roommates') {
+                    // Use the backend endpoint for dropdown results
+                    endpoint = '/roommates/api/roommates/search/';
+                    params = new URLSearchParams({ search: searchQuery });
+
+                    // Update URL ONLY if explicit submission
+                    if (isSubmission) {
+                        const newUrl = new URL(window.location);
+                        if (searchQuery) {
+                            newUrl.searchParams.set('search', searchQuery);
+                        } else {
+                            newUrl.searchParams.delete('search');
+                        }
+                        window.history.pushState({}, '', newUrl);
+                    }
+                }
+
+                fetch(`${endpoint}?${params}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        // If on apartments page AND it's a submission, update listings
+                        if (currentPage === 'apartments' && isSubmission) {
+                            const event = new CustomEvent('apartmentSearchResults', { detail: data });
+                            window.dispatchEvent(event);
+
+                            // Hide the dropdown since we're updating the main view
+                            searchResults.style.display = 'none';
+                        }
+                        // If on roommates page AND it's a submission
+                        else if (currentPage === 'roommates' && isSubmission) {
+                            // Dispatch event for client-side filtering (hybrid approach)
+                            // We pass the query string, not the data, because roommates.js filters local data
+                            const event = new CustomEvent('roommateSearch', { detail: searchQuery });
+                            window.dispatchEvent(event);
+
+                            searchResults.style.display = 'none';
+                        }
+                        else {
+                            // Otherwise (typing or other pages), show dropdown results
+                            displaySearchResults(data, currentPage);
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Search error:', error);
+                        searchResults.innerHTML = '<div style="padding: 20px; color: #fff;">Search failed. Please try again.</div>';
+                        searchResults.style.display = 'block';
+                    });
+            }
+
+            // Check for search param on load
+            const urlParams = new URLSearchParams(window.location.search);
+            const initialSearch = urlParams.get('search');
+            if (initialSearch) {
+                if (currentPage === 'apartments') {
+                    searchInput.value = initialSearch;
+                    performSearch(initialSearch, true); // Treat initial load as submission
+                } else if (currentPage === 'roommates') {
+                    searchInput.value = initialSearch;
+                    // For roommates, we just set the input. The script handles the filtering based on URL.
+                    // But we can also trigger the dropdown search if we want, but usually not needed on load.
+                }
+            }
+
+            function displaySearchResults(data, page) {
+                // Always show dropdown for search results
+                displayGlobalResults(data, page);
+            }
+
+            function displayGlobalResults(data, page) {
+                let html = '<div style="background: rgba(20, 20, 30, 0.98); border-radius: 12px; padding: 20px; color: #fff; max-height: 400px; overflow-y: auto;">';
+
+                // For apartments page, only show apartments results
+                if (page === 'apartments') {
+                    if (data && data.length > 0) {
+                        html += '<h3 style="margin: 0 0 10px; font-size: 16px; color: #8b5cf6;">Search Results</h3>';
+                        data.forEach(apt => {
+                            html += `
+                            <div style="padding: 10px; border-bottom: 1px solid #333; cursor: pointer;" onclick="window.location.href='/apartments/?search=${encodeURIComponent(apt.title)}'">
+                                <strong>${apt.title}</strong><br>
+                                <small>${apt.location} - $${apt.monthly_rent}/month</small>
+                            </div>
+                        `;
+                        });
+                    } else {
+                        html += '<p style="text-align: center; color: #888;">No apartments found</p>';
+                    }
+                }
+                // For marketplace page, only show marketplace results
+                else if (page === 'marketplace') {
+                    if (data && data.length > 0) {
+                        html += '<h3 style="margin: 0 0 10px; font-size: 16px; color: #8b5cf6;">Search Results</h3>';
+                        data.forEach(item => {
+                            html += `
+                            <div style="padding: 10px; border-bottom: 1px solid #333;">
+                                <strong>${item.title}</strong><br>
+                                <small>$${item.price} - ${item.category}</small>
+                            </div>
+                        `;
+                        });
+                    } else {
+                        html += '<p style="text-align: center; color: #888;">No items found</p>';
+                    }
+                }
+                // For roommates page, only show roommates results
+                else if (page === 'roommates') {
+                    if (data && data.length > 0) {
+                        html += '<h3 style="margin: 0 0 10px; font-size: 16px; color: #8b5cf6;">Search Results</h3>';
+                        data.forEach(rm => {
+                            html += `
+                            <div style="padding: 10px; border-bottom: 1px solid #333; cursor: pointer;" onclick="window.location.href='/roommates/?search=${encodeURIComponent(rm.title)}'">
+                                <strong>${rm.title}</strong><br>
+                                <small>${rm.city} - ${rm.budget}</small>
+                            </div>
+                        `;
+                        });
+                    } else {
+                        html += '<p style="text-align: center; color: #888;">No roommates found</p>';
+                    }
+                }
+                // For home page and others, show all categories
+                else {
+                    // Apartments
+                    if (data.apartments && data.apartments.length > 0) {
+                        html += '<h3 style="margin: 0 0 10px; font-size: 16px; color: #8b5cf6;">Apartments</h3>';
+                        data.apartments.forEach(apt => {
+                            html += `
+                            <div style="padding: 10px; border-bottom: 1px solid #333; cursor: pointer;" onclick="window.location.href='/apartments/'">
+                                <strong>${apt.title}</strong><br>
+                                <small>${apt.location} - $${apt.monthly_rent}/month</small>
+                            </div>
+                        `;
+                        });
+                    }
+
+                    // Marketplace
+                    if (data.marketplace && data.marketplace.length > 0) {
+                        html += '<h3 style="margin: 15px 0 10px; font-size: 16px; color: #8b5cf6;">Marketplace</h3>';
+                        data.marketplace.forEach(item => {
+                            html += `
+                            <div style="padding: 10px; border-bottom: 1px solid #333;">
+                                <strong>${item.title}</strong><br>
+                                <small>$${item.price} - ${item.category}</small>
+                            </div>
+                        `;
+                        });
+                    }
+
+                    // Roommates (placeholder)
+                    if (data.roommates && data.roommates.length > 0) {
+                        html += '<h3 style="margin: 15px 0 10px; font-size: 16px; color: #8b5cf6;">Roommates</h3>';
+                        data.roommates.forEach(rm => {
+                            html += `
+                            <div style="padding: 10px; border-bottom: 1px solid #333;" onclick="window.location.href='/roommates/'">
+                                <strong>${rm.title || 'Roommate'}</strong><br>
+                                <small>${rm.description || ''}</small>
+                            </div>
+                        `;
+                        });
+                    }
+
+                    if (!data.apartments?.length && !data.marketplace?.length && !data.roommates?.length) {
+                        html += '<p style="text-align: center; color: #888;">No results found</p>';
+                    }
+                }
+
+                html += '</div>';
+                searchResults.innerHTML = html;
+                searchResults.style.display = 'block';
+            }
+
+            // Search on input with debounce
+            searchInput.addEventListener('input', (e) => {
+                clearTimeout(searchTimeout);
+                searchTimeout = setTimeout(() => {
+                    performSearch(e.target.value, false); // False = typing (show dropdown)
+                }, 300);
+            });
+
+            // Search on button click
+            searchBtn.addEventListener('click', () => {
+                performSearch(searchInput.value, true); // True = submit (update page)
+            });
+
+            // Search on Enter key
+            searchInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    performSearch(searchInput.value, true); // True = submit (update page)
+                }
+            });
+
+            // Close results when clicking outside
+            document.addEventListener('click', (e) => {
+                if (!searchBox.contains(e.target)) {
+                    searchResults.style.display = 'none';
+                }
+            });
+
+            window.addEventListener('scroll', () => {
+                // 1. Logic to Minimize Search Bar on Scroll
+                // If typing, don't minimize
+                if (searchInput.value.length > 0) return;
+
+                if (window.scrollY > 150) {
+                    searchBox.classList.add('minimized');
+                } else {
+                    searchBox.classList.remove('minimized');
+                    // Reset inline styles when maximizing
+                    searchBox.style.bottom = '';
+                }
+
+                // 2. Logic to prevent overlap with Footer (Collision Detection)
+                if (searchBox.classList.contains('minimized')) {
+                    const footerRect = footer.getBoundingClientRect();
+                    const windowHeight = window.innerHeight;
+
+                    // If footer is visible in the viewport
+                    if (footerRect.top < windowHeight) {
+                        // Calculate how much to push the button up
+                        // 30px is our default bottom margin, add the overlap
+                        const newBottom = 30 + (windowHeight - footerRect.top);
+                        searchBox.style.bottom = newBottom + 'px';
+                    } else {
+                        // Reset to CSS default
+                        searchBox.style.bottom = '30px';
+                    }
+                }
+            });
+
+            // 3. Logic: Click icon to Scroll to Top & Search
+            searchBox.addEventListener('click', (e) => {
+                if (searchBox.classList.contains('minimized')) {
+                    // Prevent triggering input focus immediately
+                    e.preventDefault();
+
+                    // Scroll to top smoothly
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+
+                    // Remove class immediately so it expands while scrolling up
+                    searchBox.classList.remove('minimized');
+                    searchBox.style.bottom = '';
+
+                    // Focus input after a short delay for smooth effect
+                    setTimeout(() => {
+                        searchInput.focus();
+                    }, 500);
+                }
+            });
+        });
+    </script>
+
+</body>
+
+</html>
