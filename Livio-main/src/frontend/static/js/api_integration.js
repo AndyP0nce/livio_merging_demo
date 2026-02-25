@@ -16,11 +16,6 @@ let favoritedApartments = new Set();
 // ── Favorites ─────────────────────────────────────────
 
 async function toggleFavorite(apartmentId) {
-  if (!isUserLoggedIn()) {
-    window.location.href = '/login/?next=' + encodeURIComponent(window.location.pathname);
-    return;
-  }
-
   try {
     const response = await fetch('/apartments/api/favorites/toggle/', {
       method: 'POST',
@@ -28,10 +23,15 @@ async function toggleFavorite(apartmentId) {
       headers: {
         'Content-Type': 'application/json',
         'X-CSRFToken': LivioUtils.getCsrfToken(),
-        'Authorization': 'Bearer ' + localStorage.getItem('access_token'),
       },
       body: JSON.stringify({ apartment_id: apartmentId }),
     });
+
+    // Not logged in → redirect to login page
+    if (response.status === 401) {
+      window.location.href = '/login/?next=' + encodeURIComponent(window.location.pathname);
+      return;
+    }
 
     if (!response.ok) throw new Error('Failed to toggle favorite');
 
@@ -56,8 +56,6 @@ async function toggleFavorite(apartmentId) {
 }
 
 async function checkFavoriteStatus() {
-  if (!isUserLoggedIn()) return;
-
   try {
     const ids = AppState.listings.map((l) => l.id);
     if (ids.length === 0) return;
@@ -68,7 +66,6 @@ async function checkFavoriteStatus() {
       headers: {
         'Content-Type': 'application/json',
         'X-CSRFToken': LivioUtils.getCsrfToken(),
-        'Authorization': 'Bearer ' + localStorage.getItem('access_token'),
       },
       body: JSON.stringify({ apartment_ids: ids }),
     });
@@ -99,12 +96,6 @@ function _updateHeartButton(apartmentId, isFavorited) {
     btn.textContent = '♡';
     btn.classList.remove('listing-card__fav--active');
   }
-}
-
-// ── Auth helper ───────────────────────────────────────
-
-function isUserLoggedIn() {
-  return !!localStorage.getItem('access_token');
 }
 
 // ── Toast notification ────────────────────────────────
