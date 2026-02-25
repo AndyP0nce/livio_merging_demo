@@ -37,6 +37,7 @@ def make_user(username, password="testpass123", email=None):
 def make_apartment(owner, **kwargs):
     defaults = dict(
         title="Test Apartment",
+        description="A test apartment listing.",
         location="Los Angeles",
         city="Los Angeles",
         state="CA",
@@ -171,12 +172,12 @@ class UniversityModelTest(TestCase):
 
     def test_create_university(self):
         uni = University.objects.create(
-            abbreviation="UCLA",
-            full_name="University of California, Los Angeles",
-            latitude=34.0689,
-            longitude=-118.4452,
+            name="UCLA",
+            fullName="University of California, Los Angeles",
+            lat=34.0689,
+            lng=-118.4452,
         )
-        self.assertEqual(uni.abbreviation, "UCLA")
+        self.assertEqual(uni.name, "UCLA")
         self.assertIn("UCLA", str(uni))
 
 
@@ -190,12 +191,12 @@ class UniversityListAPITest(TestCase):
     def setUp(self):
         self.client = Client()
         University.objects.create(
-            abbreviation="UCLA", full_name="UC Los Angeles",
-            latitude=34.0689, longitude=-118.4452
+            name="UCLA", fullName="UC Los Angeles",
+            lat=34.0689, lng=-118.4452
         )
         University.objects.create(
-            abbreviation="USC", full_name="University of Southern California",
-            latitude=34.0224, longitude=-118.2851
+            name="USC", fullName="University of Southern California",
+            lat=34.0224, lng=-118.2851
         )
 
     def test_returns_200(self):
@@ -210,7 +211,7 @@ class UniversityListAPITest(TestCase):
     def test_response_fields(self):
         resp = self.client.get("/apartments/api/universities/")
         uni = resp.json()[0]
-        for field in ("abbreviation", "full_name", "latitude", "longitude"):
+        for field in ("name", "fullName", "lat", "lng"):
             self.assertIn(field, uni)
 
     def test_no_auth_required(self):
@@ -332,6 +333,7 @@ class ApartmentCreateAPITest(TestCase):
     def test_create_returns_201(self):
         resp = self._post({
             "title": "New Place",
+            "description": "A nice new place.",
             "location": "Los Angeles",
             "monthly_rent": "1200",
             "bedrooms": "1bed",
@@ -343,6 +345,7 @@ class ApartmentCreateAPITest(TestCase):
     def test_created_apartment_belongs_to_user(self):
         self._post({
             "title": "Owned Place",
+            "description": "Belongs to creator.",
             "location": "Los Angeles",
             "monthly_rent": "900",
             "bedrooms": "1bed",
