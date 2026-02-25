@@ -20,7 +20,7 @@
  */
 
 // ── Config ────────────────────────────────────────────
-var DEBUG = true;
+var DEBUG = false;
 
 function log()  { if (DEBUG) { var a = Array.prototype.slice.call(arguments); a.unshift('[AptApp]'); console.log.apply(console, a); } }
 function warn() { if (DEBUG) { var a = Array.prototype.slice.call(arguments); a.unshift('[AptApp]'); console.warn.apply(console, a); } }
@@ -147,6 +147,7 @@ function normalizeApartment(raw) {
     owner:       owner,
     available:   raw.is_active !== false,
     imageColor:  CARD_COLORS[raw.id % CARD_COLORS.length],
+    image_url:   raw.image_url || null,
   };
 }
 
@@ -222,14 +223,43 @@ function fetchUniversities() {
 
 // ── View helpers ─────────────────────────────────────
 
+var _showingFavorites = false;
+
 function getFilteredVisibleListings() {
   return filterManager.applyFilters(mapManager.getVisibleListings());
 }
 
 function refreshView() {
+  if (_showingFavorites) { refreshFavoritesView(); return; }
   var filtered = getFilteredVisibleListings();
   cardRenderer.render(filtered);
   mapManager.updateMarkerVisibility(filterManager.getPassingIds());
+}
+
+// Called when a heart is toggled while the Saved tab is active
+function refreshFavoritesView() {
+  if (!_showingFavorites) return;
+  var saved = AppState.listings.filter(function(l) {
+    return favoritedApartments.has(l.id);
+  });
+  cardRenderer.render(saved);
+}
+
+function _setTab(showFavorites) {
+  _showingFavorites = showFavorites;
+  var tabAll   = document.getElementById('tab-all');
+  var tabSaved = document.getElementById('tab-saved');
+  var subtitle = document.getElementById('listings-subtitle');
+
+  if (tabAll)   tabAll.classList.toggle('listings-panel__tab--active', !showFavorites);
+  if (tabSaved) tabSaved.classList.toggle('listings-panel__tab--active', showFavorites);
+  if (subtitle) subtitle.textContent = showFavorites ? 'saved by you' : 'in current map view';
+
+  if (showFavorites) {
+    refreshFavoritesView();
+  } else {
+    refreshView();
+  }
 }
 
 function openModal(listingId) {
@@ -299,6 +329,12 @@ function wireEvents() {
   bus.subscribe('filter:placeSelected', function(data) {
     mapManager.geocodePlaceAndHighlight(data.placeId);
   });
+
+  // Favorites tabs
+  var tabAll   = document.getElementById('tab-all');
+  var tabSaved = document.getElementById('tab-saved');
+  if (tabAll)   tabAll.addEventListener('click',   function() { _setTab(false); });
+  if (tabSaved) tabSaved.addEventListener('click',  function() { _setTab(true);  });
 
   // "+ List Your Place" button
   var listBtn = document.getElementById('btn-list-place');
@@ -375,6 +411,9 @@ function init() {
       filterManager= new FilterManager('filter-container', AppState.listings, AppState.universities, bus);
       modal        = new ListingModal('detail-modal');
       createModal  = new CreateListingModal('create-listing-modal');
+
+      // Load favorite status once listings are available
+      if (typeof checkFavoriteStatus === 'function') checkFavoriteStatus();
 
       var defaultTarget = filterManager.getTargetUniversity();
       if (defaultTarget) { recomputeDistances(defaultTarget); }

@@ -130,7 +130,7 @@ class ApartmentPostCreateSerializer(serializers.ModelSerializer):
         """
         request = self.context.get('request')
         if request and hasattr(request, 'user'):
-            validated_data['owner'] = request.user #this may not work something is wrong with user
+            validated_data['owner'] = request.user
         return super().create(validated_data)
 
 
@@ -141,5 +141,5 @@ class FavoriteApartmentSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = FavoriteApartment
-        fields = ['id', 'apartment', 'created_at', 'notes']
+        fields = ['id', 'apartment', 'created_at']
         read_only_fields = ['id', 'created_at']

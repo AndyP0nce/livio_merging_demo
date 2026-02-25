@@ -1,12 +1,10 @@
 /**
  * apartment_cards_renderer.js
- * Migrated from demo_map/frontend/js/modules/cards.js
- * Converted from ES-module to regular script.
  *
  * Renders Zillow-style listing cards inside the sidebar panel.
  * Re-renders when the map viewport changes (only visible listings shown).
  *
- * Events (published via EventBus when provided, otherwise via callbacks):
+ * Events published via EventBus:
  *   'card:hovered'  { listingId, isHovering }
  *   'card:clicked'  { listingId }
  */
@@ -15,17 +13,13 @@ class CardRenderer {
   /**
    * @param {string}   containerId  - id of the card list container element
    * @param {string}   countId      - id of the listing-count element
-   * @param {EventBus} [eventBus]   - optional; publishes card events to the bus
+   * @param {EventBus} eventBus     - pub/sub hub for inter-module communication
    */
   constructor(containerId, countId, eventBus) {
     this.container    = document.getElementById(containerId);
     this.countEl      = document.getElementById(countId);
-    this._bus         = eventBus || null;
+    this._bus         = eventBus;
     this.activeCardId = null;
-
-    // Backward-compat callbacks (used when no EventBus is provided)
-    this._onCardHover = null;
-    this._onCardClick = null;
   }
 
   // ── Public API ──────────────────────────────────
@@ -64,10 +58,6 @@ class CardRenderer {
     }
   }
 
-  // Backward-compat callback setters
-  onCardHover(cb) { this._onCardHover = cb; }
-  onCardClick(cb) { this._onCardClick = cb; }
-
   // ── Card creation ────────────────────────────────
 
   _createCard(listing) {
@@ -75,8 +65,8 @@ class CardRenderer {
     card.className = 'listing-card';
     card.dataset.listingId = listing.id;
 
-    const bedLabel = LivioUtils.formatBedLabel(listing.bedrooms);
-    const sqft     = listing.sqft ? listing.sqft.toLocaleString() : '—';
+    const bedLabel  = LivioUtils.formatBedLabel(listing.bedrooms);
+    const sqft      = listing.sqft ? listing.sqft.toLocaleString() : '—';
     const distLabel = listing._distanceMi != null
       ? listing._distanceMi.toFixed(1) + ' mi'
       : (listing.distanceFromCSUN || '');
@@ -87,52 +77,57 @@ class CardRenderer {
       .map((a) => `<span class="listing-card__amenity">${a}</span>`)
       .join('');
 
+    // Favorite state — reads from the global set managed by api_integration.js
+    const isFav     = window.favoritedApartments && window.favoritedApartments.has(listing.id);
+    const heartIcon = isFav ? '♥' : '♡';
+    const heartMod  = isFav ? ' listing-card__fav--active' : '';
+
+    // Image — real S3 photo if available, otherwise coloured placeholder
+    const imgSection = listing.image_url
+      ? `<div class="listing-card__img listing-card__img--photo" style="background:url('${listing.image_url}') center/cover no-repeat;">`
+      : `<div class="listing-card__img" style="background:${listing.imageColor};">`;
+
     card.innerHTML = `
-      <div class="listing-card__img" style="background:${listing.imageColor};">
+      ${imgSection}
         <span class="listing-card__price">$${listing.price.toLocaleString()}/mo</span>
         <span class="listing-card__type">${listing.type}</span>
+        <button class="listing-card__fav${heartMod}" data-id="${listing.id}"
+                aria-label="Save listing" title="Save">
+          ${heartIcon}
+        </button>
       </div>
       <div class="listing-card__body">
-        <div class="listing-card__title">${listing.title}</div>
+        <div class="listing-card__title">${LivioUtils.escapeHtml(listing.title)}</div>
         <div class="listing-card__specs">${bedLabel} | ${listing.bathrooms} ba | ${sqft} sqft</div>
-        <div class="listing-card__address">${listing.address}</div>
-        <div class="listing-card__desc">${listing.description || ''}</div>
+        <div class="listing-card__address">${LivioUtils.escapeHtml(listing.address)}</div>
+        <div class="listing-card__desc">${LivioUtils.escapeHtml(listing.description || '')}</div>
         <div class="listing-card__amenities">${amenityHTML}</div>
         <div class="listing-card__meta">
           <span class="listing-card__available">Available: ${listing.available ? 'Yes' : 'No'}</span>
         </div>
         <div class="listing-card__footer">
           <span class="listing-card__owner">
-            ${listing.owner.name}
+            ${LivioUtils.escapeHtml(listing.owner.name)}
             ${listing.owner.verified ? '<span class="listing-card__verified">&#10003; Verified</span>' : ''}
           </span>
           ${distLabel ? `<span class="listing-card__distance">${distLabel} from ${targetName}</span>` : ''}
         </div>
       </div>`;
 
-    card.addEventListener('mouseenter', () => this._emit('card:hovered', listing.id, true,  this._onCardHover));
-    card.addEventListener('mouseleave', () => this._emit('card:hovered', listing.id, false, this._onCardHover));
-    card.addEventListener('click',      () => this._emitClick(listing.id));
+    // Heart button — stop propagation so it doesn't open the detail modal
+    card.querySelector('.listing-card__fav').addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (typeof toggleFavorite === 'function') toggleFavorite(listing.id);
+    });
+
+    card.addEventListener('mouseenter', () =>
+      this._bus.publish('card:hovered', { listingId: listing.id, isHovering: true }));
+    card.addEventListener('mouseleave', () =>
+      this._bus.publish('card:hovered', { listingId: listing.id, isHovering: false }));
+    card.addEventListener('click', () =>
+      this._bus.publish('card:clicked', { listingId: listing.id }));
 
     return card;
-  }
-
-  // ── Event helpers ────────────────────────────────
-
-  _emit(event, listingId, isHovering, legacyCb) {
-    if (this._bus) {
-      this._bus.publish(event, { listingId, isHovering });
-    } else if (legacyCb) {
-      legacyCb(listingId, isHovering);
-    }
-  }
-
-  _emitClick(listingId) {
-    if (this._bus) {
-      this._bus.publish('card:clicked', { listingId });
-    } else if (this._onCardClick) {
-      this._onCardClick(listingId);
-    }
   }
 }
 

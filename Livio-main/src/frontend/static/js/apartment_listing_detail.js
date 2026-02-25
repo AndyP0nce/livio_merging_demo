@@ -14,7 +14,6 @@ class ListingModal {
     this._currentListing = null;
     this._currentSlide   = 0;
     this._slides         = [];
-    this._onClose        = null;
 
     this._render();
     this._bindEvents();
@@ -35,12 +34,9 @@ class ListingModal {
     this.container.classList.remove('detail-modal--open');
     document.body.style.overflow = '';
     this._currentListing = null;
-    if (this._onClose) this._onClose();
   }
 
   isOpen() { return this.container.classList.contains('detail-modal--open'); }
-
-  onClose(cb) { this._onClose = cb; }
 
   // ── Slide generation ─────────────────────────────
 

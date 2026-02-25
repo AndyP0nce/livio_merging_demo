@@ -162,10 +162,7 @@ def editProfile(request):
     serializer = ProfileCreationSerializer(current_profile, data=request.data)
 
     if serializer.is_valid():
-        print("Gets here")
-        current_profile = serializer.save() # will call the update method 
-
-    print(serializer.errors)
+        current_profile = serializer.save()
 
     getProfileSerializer = ProfileGetSerializer(current_profile, many=False) # will serialize the object with neccesary format for getting the profile
 

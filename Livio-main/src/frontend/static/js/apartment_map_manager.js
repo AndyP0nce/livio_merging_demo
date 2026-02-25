@@ -187,11 +187,6 @@ class MapManager {
     this._geocoder        = null;
     this._bus             = eventBus || null;
 
-    // Backward-compat callbacks (used when no EventBus is provided)
-    this._onBoundsChange = null;
-    this._onMarkerHover  = null;
-    this._onMarkerClick  = null;
-    this._onUniDblClick  = null;
   }
 
   // ── Initialization ───────────────────────────────
@@ -215,8 +210,6 @@ class MapManager {
     this.map.addListener('idle', () => {
       if (this._bus) {
         this._bus.publish('map:boundsChanged');
-      } else if (this._onBoundsChange) {
-        this._onBoundsChange(this.getVisibleListings());
       }
     });
   }
@@ -255,8 +248,6 @@ class MapManager {
     overlay.onDblClick  = () => {
       if (this._bus) {
         this._bus.publish('map:uniDblClicked', { university });
-      } else if (this._onUniDblClick) {
-        this._onUniDblClick(university);
       }
     };
   }
@@ -286,23 +277,17 @@ class MapManager {
         this.showInfoWindow(listing.id);
         if (this._bus) {
           this._bus.publish('map:markerHovered', { listingId: listing.id, isHovering: true });
-        } else if (this._onMarkerHover) {
-          this._onMarkerHover(listing.id, true);
         }
       };
       overlay.onMouseOut  = () => {
         this.hideInfoWindow();
         if (this._bus) {
           this._bus.publish('map:markerHovered', { listingId: listing.id, isHovering: false });
-        } else if (this._onMarkerHover) {
-          this._onMarkerHover(listing.id, false);
         }
       };
       overlay.onClick     = () => {
         if (this._bus) {
           this._bus.publish('map:markerClicked', { listingId: listing.id });
-        } else if (this._onMarkerClick) {
-          this._onMarkerClick(listing.id);
         }
       };
 
@@ -456,11 +441,6 @@ class MapManager {
     });
   }
 
-  // ── Backward-compat callback setters ────────────
-  onBoundsChange(cb)       { this._onBoundsChange = cb; }
-  onMarkerHover(cb)        { this._onMarkerHover  = cb; }
-  onMarkerClick(cb)        { this._onMarkerClick  = cb; }
-  onUniversityDblClick(cb) { this._onUniDblClick  = cb; }
 }
 
 window.InfoWindowBuilder = InfoWindowBuilder;
