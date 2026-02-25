@@ -6,7 +6,8 @@ from .views import (
     ApartmentDetailAPI,
     ToggleFavoriteAPI,
     CheckFavoriteStatusAPI,
-    GetUserFavoritesAPI
+    GetUserFavoritesAPI,
+    UniversityListView,
 )
 
 # Page view
@@ -30,4 +31,5 @@ urlpatterns = [
     path('api/favorites/toggle/', ToggleFavoriteAPI.as_view(), name='toggle-favorite'),
     path('api/favorites/check/', CheckFavoriteStatusAPI.as_view(), name='check-favorites'),
     path('api/favorites/', GetUserFavoritesAPI.as_view(), name='user-favorites'),
+    path('api/universities/', UniversityListView.as_view(), name='university-list'),
 ]
