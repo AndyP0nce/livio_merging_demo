@@ -205,6 +205,7 @@ class MapManager {
       mapTypeControl:     false,
       fullscreenControl:  false,
       streetViewControl:  false,
+      gestureHandling:    'greedy',
       zoomControlOptions: { position: google.maps.ControlPosition.RIGHT_TOP },
       styles: [
         { featureType: 'poi',     elementType: 'labels', stylers: [{ visibility: 'off' }] },
