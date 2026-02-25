@@ -1,4 +1,42 @@
-/* ---------- Livio Apartments Styles (Fix 3D Flip) ---------- */
+/* ---------- Livio Apartments Styles ---------- */
+
+/* ── Zillow-style two-column layout ──────────────────── */
+
+/*
+ * Override body padding-top on the apartment page so the
+ * two-column layout fills the viewport below the fixed header + search bar.
+ * base.css sets --top-spacing = header (80px) + search (70px) + 20px = 170px.
+ */
+.apt-app-layout {
+  display: flex;
+  /* Fill the viewport space that isn't taken by the fixed header + search */
+  height: calc(100vh - var(--top-spacing, 170px));
+  overflow: hidden;
+  /* Reset the dark body background for the clean Zillow-style panel */
+  background: #f7f7f7;
+}
+
+/* "+ List Your Place" button in the sidebar header */
+.apt-list-btn {
+  padding: 8px 14px;
+  background: #006aff;
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+  white-space: nowrap;
+  font-family: inherit;
+  flex-shrink: 0;
+}
+
+.apt-list-btn:hover {
+  background: #0059d6;
+}
+
+/* ---------- Legacy Livio Apartments Styles (Fix 3D Flip) ---------- */
 
 /* Global / Setup */
 :root {

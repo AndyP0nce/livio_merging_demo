@@ -7,9 +7,28 @@ Description:
 """
 
 from rest_framework import serializers
-from .models import ApartmentPost, FavoriteApartment
+from .models import ApartmentPost, FavoriteApartment, University
 from django.contrib.auth import get_user_model
 User = get_user_model()
+
+
+class UniversitySerializer(serializers.ModelSerializer):
+    """
+    Serializer for University campus markers.
+    Returns lat/lng as floats so the JS map manager can use them directly.
+    """
+    lat = serializers.SerializerMethodField()
+    lng = serializers.SerializerMethodField()
+
+    class Meta:
+        model  = University
+        fields = ['name', 'fullName', 'lat', 'lng']
+
+    def get_lat(self, obj):
+        return float(obj.lat)
+
+    def get_lng(self, obj):
+        return float(obj.lng)
 
 
 class UserSerializer(serializers.ModelSerializer):

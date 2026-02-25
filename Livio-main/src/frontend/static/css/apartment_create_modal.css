@@ -1,0 +1,186 @@
+/**
+ * apartment_create_modal.css
+ * Migrated from demo_map/frontend/css/create-listing.css
+ *
+ * "List Your Place" modal form.
+ * BEM naming: .create-modal, .create-modal__card, etc.
+ */
+
+.create-modal {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 9000;
+}
+
+.create-modal--open {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.create-modal__backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  z-index: 9001;
+}
+
+.create-modal__card {
+  position: relative;
+  z-index: 9002;
+  width: 600px;
+  max-width: 94vw;
+  max-height: 90vh;
+  background: #ffffff;
+  border-radius: 12px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
+  animation: aptModalSlideIn 0.2s ease-out;
+}
+
+/* Reuse the keyframe defined in apartment_detail_modal.css */
+
+.create-modal__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 24px;
+  border-bottom: 1px solid #f0f0f0;
+  flex-shrink: 0;
+}
+
+.create-modal__title { font-size: 18px; font-weight: 700; color: #2a2a2a; }
+
+.create-modal__close {
+  width: 34px; height: 34px;
+  border-radius: 50%;
+  border: none;
+  background: #f0f0f0;
+  color: #444444;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s;
+}
+
+.create-modal__close:hover { background: #e0e0e0; }
+
+.create-modal__body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px 24px 24px;
+}
+
+.create-modal__body::-webkit-scrollbar { width: 5px; }
+.create-modal__body::-webkit-scrollbar-thumb { background: #cccccc; border-radius: 3px; }
+
+.create-modal__section { margin-bottom: 16px; }
+
+.create-modal__row { display: flex; gap: 12px; margin-bottom: 16px; }
+
+.create-modal__field { flex: 1; }
+.create-modal__field--grow { flex: 2; }
+.create-modal__field--sm   { flex: 1; min-width: 80px; }
+
+.create-modal__label {
+  display: block;
+  font-size: 11px; font-weight: 700; color: #666666;
+  text-transform: uppercase; letter-spacing: 0.5px;
+  margin-bottom: 6px;
+}
+
+.create-modal__input,
+.create-modal__select,
+.create-modal__textarea {
+  width: 100%;
+  padding: 9px 12px;
+  border: 1.5px solid #e0e0e0;
+  border-radius: 8px;
+  font-size: 14px;
+  color: #2a2a2a;
+  background: #ffffff;
+  outline: none;
+  transition: border-color 0.15s;
+  font-family: inherit;
+}
+
+.create-modal__input:focus,
+.create-modal__select:focus,
+.create-modal__textarea:focus { border-color: #006aff; }
+
+.create-modal__input--half { max-width: 160px; }
+
+.create-modal__textarea { resize: vertical; min-height: 72px; }
+
+.create-modal__checks { display: flex; flex-wrap: wrap; gap: 8px; }
+
+.create-modal__check {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px; color: #444444;
+  cursor: pointer;
+  padding: 5px 10px;
+  border: 1.5px solid #e0e0e0;
+  border-radius: 6px;
+  transition: border-color 0.15s, background 0.15s, color 0.15s;
+  user-select: none;
+}
+
+.create-modal__check input[type="checkbox"] { display: none; }
+
+.create-modal__check:has(input:checked) {
+  border-color: #006aff;
+  background: #f0f4ff;
+  color: #006aff;
+}
+
+.create-modal__section--owner {
+  border-top: 1px solid #f0f0f0;
+  padding-top: 16px;
+  margin-top: 8px;
+}
+
+.create-modal__hint { font-size: 11px; color: #999999; margin-top: 5px; }
+
+.create-modal__error {
+  background: #fff0f0;
+  border: 1px solid #ffcccc;
+  color: #c0392b;
+  font-size: 13px;
+  padding: 10px 14px;
+  border-radius: 8px;
+  margin-bottom: 16px;
+}
+
+.create-modal__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding-top: 8px;
+}
+
+.create-modal__btn {
+  padding: 10px 22px;
+  border-radius: 8px;
+  font-size: 14px; font-weight: 600;
+  cursor: pointer;
+  border: none;
+  transition: background 0.15s, opacity 0.15s;
+  font-family: inherit;
+}
+
+.create-modal__btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.create-modal__btn--primary { background: #006aff; color: #ffffff; }
+.create-modal__btn--primary:hover:not(:disabled) { background: #0059d6; }
+
+.create-modal__btn--ghost { background: #f0f0f0; color: #444444; }
+.create-modal__btn--ghost:hover { background: #e4e4e4; }
+
+/* Google Places Autocomplete must appear above modal */
+.pac-container { z-index: 10000 !important; }

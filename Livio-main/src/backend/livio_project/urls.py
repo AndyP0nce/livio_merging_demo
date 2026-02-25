@@ -32,9 +32,6 @@ def signup(request):
 def profile(request):
     return render(request, "profile_page.html")
 
-def apartment(request):
-    return render(request, "apartment_page.html")
-
 def apartment_map(request):
     return render(request, "aprt_map_api.html")
 
@@ -57,7 +54,8 @@ urlpatterns = [
     path('login/', login_view, name='login'),
     path('signup/', signup, name='signup'),
  
-    path('apartments/', apartment, name='apartment'),
+    # apartments/ is now handled by the apartments app (includes page view + API endpoints)
+    path('apartments/', include('apartments.urls')),
     path('apartment_map/', apartment_map, name='apartment_map'),
     path('users/', include('users.urls')),
     path('profile/', profile, name='profile'),

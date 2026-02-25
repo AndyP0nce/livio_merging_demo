@@ -22,13 +22,28 @@ from rest_framework.permissions import IsAuthenticated, AllowAny
 from django.shortcuts import get_object_or_404
 from django.db.models import Q
 
-from .models import ApartmentPost, FavoriteApartment
+from .models import ApartmentPost, FavoriteApartment, University
 from .serializers import (
     ApartmentPostSerializer,
     ApartmentPostCreateSerializer,
-    FavoriteApartmentSerializer
+    FavoriteApartmentSerializer,
+    UniversitySerializer,
 )
 from decimal import Decimal
+
+
+class UniversityListView(APIView):
+    """
+    GET /apartments/api/universities/
+    Returns all university campuses as JSON for the map pill markers.
+    No authentication required.
+    """
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        universities = University.objects.all()
+        serializer = UniversitySerializer(universities, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 class ApartmentListAPI(APIView):

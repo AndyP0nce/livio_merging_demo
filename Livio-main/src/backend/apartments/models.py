@@ -192,6 +192,25 @@ class ApartmentPost(models.Model):
         return self.get_bathrooms_display()
 
 
+class University(models.Model):
+    """
+    California university campus — used for map pill markers
+    and distance calculations in the apartment finder.
+    Populated via: python manage.py seed_universities
+    """
+    name     = models.CharField(max_length=20,  unique=True, help_text="Short abbreviation, e.g. CSUN")
+    fullName = models.CharField(max_length=200, help_text="Full official name")
+    lat      = models.DecimalField(max_digits=9, decimal_places=6)
+    lng      = models.DecimalField(max_digits=9, decimal_places=6)
+
+    class Meta:
+        verbose_name_plural = 'Universities'
+        ordering = ['name']
+
+    def __str__(self):
+        return self.name
+
+
 class FavoriteApartment(models.Model):
     """
     Stores which users have favorited which apartments.
