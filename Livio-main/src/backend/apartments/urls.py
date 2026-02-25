@@ -19,11 +19,9 @@ def apartment_list_view(request):
     
     
 
-app_name = 'apartments'
-
 urlpatterns = [
     # HTML Page(rendered template)
-    path('', apartment_list_view, name='apartment-list-page'),
+    path('', apartment_list_view, name='apartment'),
     
     # API endpoints
     path('api/apartments/', ApartmentListAPI.as_view(), name='apartment-list'),
