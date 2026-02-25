@@ -182,5 +182,106 @@
 .create-modal__btn--ghost { background: #f0f0f0; color: #444444; }
 .create-modal__btn--ghost:hover { background: #e4e4e4; }
 
+/* ── Image upload area ─────────────────────────────── */
+
+.create-modal__upload {
+  position: relative;
+  border: 2px dashed #d0d0d0;
+  border-radius: 10px;
+  background: #fafafa;
+  transition: border-color 0.15s, background 0.15s;
+  overflow: hidden;
+}
+
+.create-modal__upload:focus-within {
+  border-color: #006aff;
+  background: #f5f8ff;
+}
+
+/* Hide the native file input but keep it accessible */
+.create-modal__file-input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+  z-index: 2;
+}
+
+/* Visible clickable label shown when no image is selected */
+.create-modal__upload-label {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 28px 16px;
+  cursor: pointer;
+  color: #888888;
+  font-size: 13px;
+  text-align: center;
+  pointer-events: none; /* file input handles click */
+}
+
+.create-modal__upload-label svg {
+  color: #aaaaaa;
+}
+
+.create-modal__upload-label strong {
+  color: #006aff;
+  font-weight: 600;
+}
+
+/* Preview container (shown after a file is chosen) */
+.create-modal__img-preview {
+  position: relative;
+  width: 100%;
+}
+
+.create-modal__preview-img {
+  display: block;
+  width: 100%;
+  max-height: 200px;
+  object-fit: cover;
+  border-radius: 8px;
+}
+
+/* × remove button over the preview */
+.create-modal__remove-img {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(0, 0, 0, 0.55);
+  color: #ffffff;
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 3;
+  transition: background 0.15s;
+}
+
+.create-modal__remove-img:hover { background: rgba(0, 0, 0, 0.75); }
+
+/* Upload status text */
+.create-modal__upload-status {
+  display: block;
+  font-size: 12px;
+  padding: 4px 8px 8px;
+  color: #888888;
+  text-align: center;
+}
+
+.create-modal__upload-status--uploading { color: #006aff; }
+.create-modal__upload-status--done      { color: #2ecc71; }
+.create-modal__upload-status--error     { color: #e74c3c; }
+
 /* Google Places Autocomplete must appear above modal */
 .pac-container { z-index: 10000 !important; }

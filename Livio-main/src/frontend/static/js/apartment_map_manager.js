@@ -9,21 +9,29 @@
  *   - University campus pill markers
  *   - InfoWindow popups on marker hover
  *   - Bounds-change callbacks to sync sidebar cards
+ *
+ * Events published (via EventBus when provided):
+ *   'map:boundsChanged'   (no data)
+ *   'map:markerHovered'   { listingId, isHovering }
+ *   'map:markerClicked'   { listingId }
+ *   'map:uniDblClicked'   { university }
  */
 
-// Overlay classes are created lazily after Google Maps loads
-let _MarkerOverlay = null;
-let _PriceMarkerOverlay = null;
+// Overlay classes are initialized lazily after Google Maps loads
+let _MarkerOverlay           = null;
+let _PriceMarkerOverlay      = null;
 let _UniversityMarkerOverlay = null;
 
 function _initOverlayClasses() {
   if (_MarkerOverlay) return;
 
+  // ── Base overlay ─────────────────────────────────
+
   _MarkerOverlay = class extends google.maps.OverlayView {
     constructor(position) {
       super();
-      this.position = position;
-      this.div = null;
+      this.position   = position;
+      this.div        = null;
       this.onMouseOver = null;
       this.onMouseOut  = null;
       this.onClick     = null;
@@ -56,9 +64,12 @@ function _initOverlayClasses() {
       if (this.div) this.div.classList.toggle(this._getActiveClass(), active);
     }
 
+    /** Subclasses must implement this to return the marker DOM element. */
     _createDiv()      { throw new Error('Subclass must implement _createDiv'); }
     _getActiveClass() { return 'marker--active'; }
   };
+
+  // ── Price marker (listing) ────────────────────────
 
   _PriceMarkerOverlay = class extends _MarkerOverlay {
     constructor(position, price, id, map) {
@@ -78,6 +89,8 @@ function _initOverlayClasses() {
 
     _getActiveClass() { return 'price-marker--active'; }
   };
+
+  // ── University marker ─────────────────────────────
 
   _UniversityMarkerOverlay = class extends _MarkerOverlay {
     constructor(position, name, fullName, map) {
@@ -111,25 +124,72 @@ function _initOverlayClasses() {
   };
 }
 
-// ── MapManager (public class) ─────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
+// InfoWindowBuilder – centralizes info-window HTML so there is one place
+//                     to change styles or content structure.
+// ─────────────────────────────────────────────────────────────────────────────
+
+const InfoWindowBuilder = {
+  /**
+   * Build the info-window HTML for a listing marker.
+   * @param {object} listing - normalized listing object
+   * @returns {string}
+   */
+  forListing(listing) {
+    const bedLabel = LivioUtils.formatBedLabel(listing.bedrooms);
+    const sqft     = listing.sqft ? listing.sqft.toLocaleString() : '—';
+    return (
+      '<div class="info-window">' +
+        '<div class="info-window__img" style="background:' + listing.imageColor + ';">' +
+          '<span class="info-window__type">' + listing.type + '</span>' +
+        '</div>' +
+        '<div class="info-window__body">' +
+          '<div class="info-window__price">$' + listing.price.toLocaleString() + '/mo</div>' +
+          '<div class="info-window__specs">' + bedLabel + ' | ' + listing.bathrooms + ' ba | ' + sqft + ' sqft</div>' +
+          '<div class="info-window__address">' + listing.address + '</div>' +
+          '<div class="info-window__owner">Posted by ' + listing.owner.name + (listing.owner.verified ? ' &#10003;' : '') + '</div>' +
+        '</div>' +
+      '</div>'
+    );
+  },
+
+  /**
+   * Build the info-window HTML for a university marker.
+   * @param {object} university - { name, fullName }
+   * @returns {string}
+   */
+  forUniversity(university) {
+    return (
+      '<div style="padding:10px 12px;font-family:-apple-system,BlinkMacSystemFont,\'Segoe UI\',Roboto,sans-serif;">' +
+        '<strong style="font-size:14px;color:#2a2a2a;">' + university.fullName + '</strong><br>' +
+        '<span style="color:#666;font-size:12px;">' + university.name + ' — Main Campus</span>' +
+      '</div>'
+    );
+  },
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// MapManager – public class
+// ─────────────────────────────────────────────────────────────────────────────
 
 class MapManager {
-  constructor() {
-    this.map             = null;
-    this.priceMarkers    = []; // { overlay, infoWindow, listing }
+  /**
+   * @param {EventBus} [eventBus] - optional; publishes map events to the bus
+   */
+  constructor(eventBus) {
+    this.map              = null;
+    this.priceMarkers     = []; // { overlay, infoWindow, listing }
     this.activeInfoWindow = null;
     this.activeMarkerId   = null;
     this._searchHighlight = null;
     this._searchPin       = null;
     this._uniMarkers      = []; // { overlay, infoWindow, isOpen, position }
     this._geocoder        = null;
+    this._bus             = eventBus || null;
 
-    // Callbacks set by apartment_script.js
-    this._onBoundsChange = null;
-    this._onMarkerHover  = null;
-    this._onMarkerClick  = null;
-    this._onUniDblClick  = null;
   }
+
+  // ── Initialization ───────────────────────────────
 
   init(containerId, center, zoom) {
     _initOverlayClasses();
@@ -148,23 +208,21 @@ class MapManager {
     });
 
     this.map.addListener('idle', () => {
-      if (this._onBoundsChange) this._onBoundsChange(this.getVisibleListings());
+      if (this._bus) {
+        this._bus.publish('map:boundsChanged');
+      }
     });
   }
 
-  // ── University markers ──────────────────────────────
+  // ── University markers ───────────────────────────
 
   addUniversityMarker(university) {
-    const pos = new google.maps.LatLng(university.lat, university.lng);
+    const pos     = new google.maps.LatLng(university.lat, university.lng);
     const overlay = new _UniversityMarkerOverlay(pos, university.name, university.fullName, this.map);
 
     const infoWindow = new google.maps.InfoWindow({
-      content:
-        '<div style="padding:10px 12px;font-family:-apple-system,BlinkMacSystemFont,\'Segoe UI\',Roboto,sans-serif;">' +
-          '<strong style="font-size:14px;color:#2a2a2a;">' + university.fullName + '</strong><br>' +
-          '<span style="color:#666;font-size:12px;">' + university.name + ' — Main Campus</span>' +
-        '</div>',
-      pixelOffset:   new google.maps.Size(0, -44),
+      content:        InfoWindowBuilder.forUniversity(university),
+      pixelOffset:    new google.maps.Size(0, -44),
       disableAutoPan: true,
     });
 
@@ -187,7 +245,11 @@ class MapManager {
         overlay.setActive(true); entry.isOpen = true;
       }
     };
-    overlay.onDblClick  = () => { if (this._onUniDblClick) this._onUniDblClick(university); };
+    overlay.onDblClick  = () => {
+      if (this._bus) {
+        this._bus.publish('map:uniDblClicked', { university });
+      }
+    };
   }
 
   _closeAllUniPopups() {
@@ -196,7 +258,7 @@ class MapManager {
     });
   }
 
-  // ── Listing markers ─────────────────────────────────
+  // ── Listing markers ──────────────────────────────
 
   addListingMarkers(listings) {
     listings.forEach((listing) => {
@@ -206,36 +268,34 @@ class MapManager {
       );
 
       const infoWindow = new google.maps.InfoWindow({
-        content:        this._buildInfoWindowHTML(listing),
+        content:        InfoWindowBuilder.forListing(listing),
         pixelOffset:    new google.maps.Size(0, -40),
         disableAutoPan: true,
       });
 
-      overlay.onMouseOver = () => { this.showInfoWindow(listing.id); if (this._onMarkerHover) this._onMarkerHover(listing.id, true);  };
-      overlay.onMouseOut  = () => { this.hideInfoWindow();            if (this._onMarkerHover) this._onMarkerHover(listing.id, false); };
-      overlay.onClick     = () => { if (this._onMarkerClick) this._onMarkerClick(listing.id); };
+      overlay.onMouseOver = () => {
+        this.showInfoWindow(listing.id);
+        if (this._bus) {
+          this._bus.publish('map:markerHovered', { listingId: listing.id, isHovering: true });
+        }
+      };
+      overlay.onMouseOut  = () => {
+        this.hideInfoWindow();
+        if (this._bus) {
+          this._bus.publish('map:markerHovered', { listingId: listing.id, isHovering: false });
+        }
+      };
+      overlay.onClick     = () => {
+        if (this._bus) {
+          this._bus.publish('map:markerClicked', { listingId: listing.id });
+        }
+      };
 
       this.priceMarkers.push({ overlay, infoWindow, listing });
     });
   }
 
-  _buildInfoWindowHTML(listing) {
-    const bedLabel = listing.bedrooms === 0 ? 'Studio' : listing.bedrooms + ' bd';
-    const sqft = listing.sqft ? listing.sqft.toLocaleString() : '—';
-    return (
-      '<div class="info-window">' +
-        '<div class="info-window__img" style="background:' + listing.imageColor + ';">' +
-          '<span class="info-window__type">' + listing.type + '</span>' +
-        '</div>' +
-        '<div class="info-window__body">' +
-          '<div class="info-window__price">$' + listing.price.toLocaleString() + '/mo</div>' +
-          '<div class="info-window__specs">' + bedLabel + ' | ' + listing.bathrooms + ' ba | ' + sqft + ' sqft</div>' +
-          '<div class="info-window__address">' + listing.address + '</div>' +
-          '<div class="info-window__owner">Posted by ' + listing.owner.name + (listing.owner.verified ? ' &#10003;' : '') + '</div>' +
-        '</div>' +
-      '</div>'
-    );
-  }
+  // ── Info windows ─────────────────────────────────
 
   showInfoWindow(listingId) {
     this.hideInfoWindow();
@@ -261,10 +321,10 @@ class MapManager {
     }
   }
 
-  highlightMarker(listingId)   { this.showInfoWindow(listingId); }
-  unhighlightMarker()          { this.hideInfoWindow(); }
+  highlightMarker(listingId)  { this.showInfoWindow(listingId); }
+  unhighlightMarker()         { this.hideInfoWindow(); }
 
-  // ── Search highlight + geocoding ────────────────────
+  // ── Search highlight + geocoding ─────────────────
 
   fitBoundsToListings(listings) {
     if (!listings.length) return;
@@ -298,7 +358,10 @@ class MapManager {
     this.clearSearchPin();
     this._searchPin = new google.maps.Marker({
       position: { lat, lng }, map: this.map, title,
-      icon: { path: google.maps.SymbolPath.CIRCLE, scale: 9, fillColor: '#e53935', fillOpacity: 1, strokeColor: '#ffffff', strokeWeight: 2.5 },
+      icon: {
+        path: google.maps.SymbolPath.CIRCLE, scale: 9,
+        fillColor: '#e53935', fillOpacity: 1, strokeColor: '#ffffff', strokeWeight: 2.5,
+      },
       zIndex: 999, animation: google.maps.Animation.DROP,
     });
   }
@@ -333,13 +396,15 @@ class MapManager {
     });
   }
 
+  // ── Geocoding ────────────────────────────────────
+
   _getGeocoder() {
     if (!this._geocoder) this._geocoder = new google.maps.Geocoder();
     return this._geocoder;
   }
 
-  async geocodePlaceAndHighlight(placeId)  { return this._geocodeAndHighlight({ placeId }); }
-  async geocodeQueryAndHighlight(query)    { return this._geocodeAndHighlight({ address: query }); }
+  async geocodePlaceAndHighlight(placeId) { return this._geocodeAndHighlight({ placeId }); }
+  async geocodeQueryAndHighlight(query)   { return this._geocodeAndHighlight({ address: query }); }
 
   async _geocodeAndHighlight(request) {
     try {
@@ -354,8 +419,11 @@ class MapManager {
     const bounds = result.geometry.viewport || result.geometry.bounds;
     if (bounds) {
       this.map.fitBounds(bounds, { top: 40, right: 40, bottom: 40, left: 40 });
-      const ne = bounds.getNorthEast(); const sw = bounds.getSouthWest();
-      this._searchHighlight = this._createHighlightRect({ north: ne.lat(), south: sw.lat(), east: ne.lng(), west: sw.lng() });
+      const ne = bounds.getNorthEast();
+      const sw = bounds.getSouthWest();
+      this._searchHighlight = this._createHighlightRect({
+        north: ne.lat(), south: sw.lat(), east: ne.lng(), west: sw.lng(),
+      });
     } else {
       const loc = result.geometry.location;
       this.map.panTo(loc);
@@ -373,12 +441,7 @@ class MapManager {
     });
   }
 
-  // ── Event registration ──────────────────────────────
-  onBoundsChange(cb)        { this._onBoundsChange = cb; }
-  onMarkerHover(cb)         { this._onMarkerHover  = cb; }
-  onMarkerClick(cb)         { this._onMarkerClick  = cb; }
-  onUniversityDblClick(cb)  { this._onUniDblClick  = cb; }
 }
 
-// Make available globally
-window.MapManager = MapManager;
+window.InfoWindowBuilder = InfoWindowBuilder;
+window.MapManager        = MapManager;

@@ -16,6 +16,7 @@ Endpoints:
 
 from django.conf import settings
 from rest_framework.views import APIView
+from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated, AllowAny
@@ -30,6 +31,9 @@ from .serializers import (
     UniversitySerializer,
 )
 from decimal import Decimal
+import boto3
+import os
+from dotenv import load_dotenv
 
 
 class UniversityListView(APIView):
@@ -358,11 +362,58 @@ class GetUserFavoritesAPI(APIView):
 
 
 
-# Add at the end of views.py
-from rest_framework.decorators import api_view
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def apartment_presigned_url(request):
+    """
+    POST /apartments/api/upload-url/
 
-@api_view(['GET'])
-def getFeatures(request):
-    """Your old endpoint - replace with actual implementation"""
-    # Add your old logic here
-    return Response({"message": "Features endpoint"})
+    Returns a presigned S3 PUT URL so the browser can upload an apartment
+    image directly to S3 without routing the file through Django.
+
+    Request body:
+        fileName   (str) – original filename, e.g. "living-room.jpg"
+        fileType   (str) – MIME type, e.g. "image/jpeg"
+        expiration (int) – seconds until the URL expires (default 300)
+
+    Response:
+        presignedURL (str) – PUT URL for direct S3 upload
+        imageURL     (str) – permanent public URL of the uploaded image
+        expires      (int) – expiration time used
+    """
+    file_name      = request.data.get('fileName', '')
+    file_type      = request.data.get('fileType', 'image/jpeg')
+    expiration     = int(request.data.get('expiration', 300))
+
+    if not file_name:
+        return Response({'error': 'fileName is required.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    load_dotenv()
+
+    s3_client = boto3.client(
+        's3',
+        aws_access_key_id=os.getenv('AWS_ACCESS_KEY_ID'),
+        aws_secret_access_key=os.getenv('AWS_SECRET_ACCESS_KEY'),
+        region_name=os.getenv('AWS_REGION'),
+    )
+
+    # Store under apartment-images/{user_id}/{filename}
+    s3_key = f"apartment-images/{request.user.id}/{file_name}"
+    s3_url = f"https://{os.getenv('S3_BUCKET_NAME')}.s3.{os.getenv('AWS_REGION')}.amazonaws.com/{s3_key}"
+
+    presigned = s3_client.generate_presigned_url(
+        ClientMethod='put_object',
+        Params={
+            'Bucket':      os.getenv('S3_BUCKET_NAME'),
+            'Key':         s3_key,
+            'ContentType': file_type,
+        },
+        ExpiresIn=expiration,
+    )
+
+    s3_client.close()
+
+    return Response(
+        {'presignedURL': presigned, 'imageURL': s3_url, 'expires': expiration},
+        status=status.HTTP_200_OK,
+    )

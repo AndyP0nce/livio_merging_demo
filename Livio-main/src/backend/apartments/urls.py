@@ -8,6 +8,7 @@ from .views import (
     CheckFavoriteStatusAPI,
     GetUserFavoritesAPI,
     UniversityListView,
+    apartment_presigned_url,
 )
 
 # Page view
@@ -30,4 +31,5 @@ urlpatterns = [
     path('api/favorites/check/', CheckFavoriteStatusAPI.as_view(), name='check-favorites'),
     path('api/favorites/', GetUserFavoritesAPI.as_view(), name='user-favorites'),
     path('api/universities/', UniversityListView.as_view(), name='university-list'),
+    path('api/upload-url/',   apartment_presigned_url,      name='apartment-upload-url'),
 ]

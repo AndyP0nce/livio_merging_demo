@@ -164,8 +164,7 @@ class ApartmentPost(models.Model):
                 self.latitude = Decimal('34.0522')
                 self.longitude = Decimal('-118.2437')
                 
-        except Exception as e:
-            print(f"Geocoding error: {e}")
+        except Exception:
             # Default to LA coordinates
             self.latitude = Decimal('34.0522')
             self.longitude = Decimal('-118.2437')
@@ -183,15 +182,6 @@ class ApartmentPost(models.Model):
             return []
         return [a.strip() for a in self.amenities.split(',')]
     
-    def get_bedrooms_display(self):
-        """Return formatted bedroom count."""
-        return self.get_bedrooms_display()
-    
-    def get_bathrooms_display(self):
-        """Return formatted bathroom count."""
-        return self.get_bathrooms_display()
-
-
 class University(models.Model):
     """
     California university campus — used for map pill markers
@@ -241,12 +231,6 @@ class FavoriteApartment(models.Model):
     created_at = models.DateTimeField(
         auto_now_add=True,
         help_text="When the apartment was favorited"
-    )
-    
-    notes = models.TextField(
-        blank=True,
-        null=True,
-        help_text="Optional notes about why user likes this apartment"
     )
     
     class Meta:

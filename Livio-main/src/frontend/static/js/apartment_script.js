@@ -10,10 +10,17 @@
  *
  * Livio's API field names differ from demo_map's; this file
  * normalizes the response before passing data to the UI modules.
+ *
+ * Architecture overview
+ * ─────────────────────
+ *   AppState        – single source of truth for listings + universities
+ *   EventBus (bus)  – pub/sub hub; modules publish events, this file
+ *                     subscribes and orchestrates reactions
+ *   LivioUtils      – shared pure helpers (coords, distance, escaping…)
  */
 
-// ── Config ───────────────────────────────────────────
-var DEBUG = true;
+// ── Config ────────────────────────────────────────────
+var DEBUG = false;
 
 function log()  { if (DEBUG) { var a = Array.prototype.slice.call(arguments); a.unshift('[AptApp]'); console.log.apply(console, a); } }
 function warn() { if (DEBUG) { var a = Array.prototype.slice.call(arguments); a.unshift('[AptApp]'); console.warn.apply(console, a); } }
@@ -28,11 +35,27 @@ var CARD_COLORS = [
   '#D35400', '#27AE60', '#2980B9', '#C0392B', '#16A085',
 ];
 
-// ── Data ─────────────────────────────────────────────
-var LISTINGS     = [];
-var UNIVERSITIES = [];
+// ── Application state ─────────────────────────────────
+/**
+ * AppState replaces the previous bare global variables LISTINGS and
+ * UNIVERSITIES, giving one named namespace and a findListing helper
+ * to avoid repeated for-loops throughout the codebase.
+ */
+var AppState = {
+  listings:     [],
+  universities: [],
+
+  /** @param {number} id @returns {object|null} */
+  findListing: function(id) {
+    for (var i = 0; i < this.listings.length; i++) {
+      if (this.listings[i].id === id) return this.listings[i];
+    }
+    return null;
+  },
+};
 
 // ── Module instances ──────────────────────────────────
+var bus;          // EventBus – created in init() after data loads
 var mapManager;
 var cardRenderer;
 var filterManager;
@@ -42,8 +65,8 @@ var createModal;
 // ── Data normalization ────────────────────────────────
 
 /**
- * Convert livio's ApartmentPost JSON to the demo_map shape
- * expected by MapManager, CardRenderer, FilterManager, and ListingModal.
+ * Convert Livio's ApartmentPost JSON to the internal shape expected by
+ * MapManager, CardRenderer, FilterManager, and ListingModal.
  */
 function normalizeApartment(raw) {
   var price = parseFloat(raw.monthly_rent) || 0;
@@ -124,26 +147,18 @@ function normalizeApartment(raw) {
     owner:       owner,
     available:   raw.is_active !== false,
     imageColor:  CARD_COLORS[raw.id % CARD_COLORS.length],
+    image_url:   raw.image_url || null,
   };
 }
 
-// ── Distance (Haversine) ──────────────────────────────
-
-function haversineDistanceMi(lat1, lng1, lat2, lng2) {
-  var R   = 3958.8;
-  var toR = function(d) { return d * Math.PI / 180; };
-  var dLat = toR(lat2 - lat1);
-  var dLng = toR(lng2 - lng1);
-  var a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-          Math.cos(toR(lat1)) * Math.cos(toR(lat2)) *
-          Math.sin(dLng / 2) * Math.sin(dLng / 2);
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-}
+// ── Distance ─────────────────────────────────────────
 
 function recomputeDistances(targetUni) {
-  LISTINGS.forEach(function(listing) {
-    if (listing.lat !== null && listing.lng !== null && !isNaN(listing.lat) && !isNaN(listing.lng)) {
-      listing._distanceMi = haversineDistanceMi(listing.lat, listing.lng, targetUni.lat, targetUni.lng);
+  AppState.listings.forEach(function(listing) {
+    if (LivioUtils.isValidCoords(listing.lat, listing.lng)) {
+      listing._distanceMi = LivioUtils.haversineDistanceMi(
+        listing.lat, listing.lng, targetUni.lat, targetUni.lng
+      );
     } else {
       listing._distanceMi = null;
     }
@@ -166,7 +181,7 @@ function fetchListings() {
       var parsed = data
         .map(normalizeApartment)
         .filter(function(l) {
-          if (l.lat === null || l.lng === null || isNaN(l.lat) || isNaN(l.lng)) {
+          if (!LivioUtils.isValidCoords(l.lat, l.lng)) {
             warn('Listing id=' + l.id + ' has no coordinates — skipping map marker');
             return false;
           }
@@ -208,72 +223,101 @@ function fetchUniversities() {
 
 // ── View helpers ─────────────────────────────────────
 
+var _showingFavorites = false;
+
 function getFilteredVisibleListings() {
-  var visible = mapManager.getVisibleListings();
-  return filterManager.applyFilters(visible);
+  return filterManager.applyFilters(mapManager.getVisibleListings());
 }
 
 function refreshView() {
+  if (_showingFavorites) { refreshFavoritesView(); return; }
   var filtered = getFilteredVisibleListings();
   cardRenderer.render(filtered);
-  var passingIds = filterManager.getPassingIds();
-  mapManager.updateMarkerVisibility(passingIds);
+  mapManager.updateMarkerVisibility(filterManager.getPassingIds());
+}
+
+// Called when a heart is toggled while the Saved tab is active
+function refreshFavoritesView() {
+  if (!_showingFavorites) return;
+  var saved = AppState.listings.filter(function(l) {
+    return favoritedApartments.has(l.id);
+  });
+  cardRenderer.render(saved);
+}
+
+function _setTab(showFavorites) {
+  _showingFavorites = showFavorites;
+  var tabAll   = document.getElementById('tab-all');
+  var tabSaved = document.getElementById('tab-saved');
+  var subtitle = document.getElementById('listings-subtitle');
+
+  if (tabAll)   tabAll.classList.toggle('listings-panel__tab--active', !showFavorites);
+  if (tabSaved) tabSaved.classList.toggle('listings-panel__tab--active', showFavorites);
+  if (subtitle) subtitle.textContent = showFavorites ? 'saved by you' : 'in current map view';
+
+  if (showFavorites) {
+    refreshFavoritesView();
+  } else {
+    refreshView();
+  }
 }
 
 function openModal(listingId) {
-  var listing = null;
-  for (var i = 0; i < LISTINGS.length; i++) {
-    if (LISTINGS[i].id === listingId) { listing = LISTINGS[i]; break; }
-  }
+  var listing = AppState.findListing(listingId);
   if (listing) modal.open(listing);
 }
 
 // ── Event wiring ─────────────────────────────────────
 
 function wireEvents() {
-  // Map moved → refresh sidebar
-  mapManager.onBoundsChange(function() { refreshView(); });
 
-  // Filter changed → refresh
-  filterManager.onChange(function() { refreshView(); });
+  // Map moved → refresh sidebar
+  bus.subscribe('map:boundsChanged', function() { refreshView(); });
+
+  // Any filter changed → refresh
+  bus.subscribe('filter:changed', function() { refreshView(); });
 
   // Target university changed → recompute distances, pan, refresh
-  filterManager.onTargetChange(function(university) {
+  bus.subscribe('filter:targetChanged', function(data) {
+    var university = data.university;
     recomputeDistances(university);
     mapManager.setTargetUniversity(university.name);
     mapManager.panTo(university.lat, university.lng, 13);
     refreshView();
   });
 
-  // Search (debounced) → pan map + highlight
-  filterManager.onSearchChange(function(matchingListings) {
+  // Debounced search → pan map + highlight matching results
+  bus.subscribe('filter:searchChanged', function(data) {
+    var matchingListings = data.matches;
     if (matchingListings.length > 0) {
       mapManager.fitBoundsToListings(matchingListings);
       mapManager.showSearchHighlight(matchingListings);
       if (matchingListings.length === 1) {
-        mapManager.showSearchPin(matchingListings[0].lat, matchingListings[0].lng, matchingListings[0].address);
+        mapManager.showSearchPin(
+          matchingListings[0].lat, matchingListings[0].lng, matchingListings[0].address
+        );
       } else {
         mapManager.clearSearchPin();
       }
     } else {
       var query = filterManager.state.searchQuery;
       if (query) {
+        // Fall back to panning to a matching university
         var uniMatch = null;
-        for (var i = 0; i < UNIVERSITIES.length; i++) {
-          var u = UNIVERSITIES[i];
-          if (u.name.toLowerCase().indexOf(query) !== -1 || u.fullName.toLowerCase().indexOf(query) !== -1) {
+        for (var i = 0; i < AppState.universities.length; i++) {
+          var u = AppState.universities[i];
+          if (u.name.toLowerCase().indexOf(query) !== -1 ||
+              u.fullName.toLowerCase().indexOf(query) !== -1) {
             uniMatch = u; break;
           }
         }
-        if (uniMatch) {
-          mapManager.clearSearchHighlight();
-          mapManager.clearSearchPin();
-          mapManager.panTo(uniMatch.lat, uniMatch.lng, 14);
-          return;
-        }
         mapManager.clearSearchHighlight();
         mapManager.clearSearchPin();
-        mapManager.geocodeQueryAndHighlight(query);
+        if (uniMatch) {
+          mapManager.panTo(uniMatch.lat, uniMatch.lng, 14);
+        } else {
+          mapManager.geocodeQueryAndHighlight(query);
+        }
       } else {
         mapManager.clearSearchHighlight();
         mapManager.clearSearchPin();
@@ -281,28 +325,39 @@ function wireEvents() {
     }
   });
 
-  // Google Place selected from autocomplete
-  filterManager.onPlaceSelect(function(placeId) {
-    mapManager.geocodePlaceAndHighlight(placeId);
+  // Google Place selected from autocomplete → geocode and highlight
+  bus.subscribe('filter:placeSelected', function(data) {
+    mapManager.geocodePlaceAndHighlight(data.placeId);
   });
+
+  // Favorites tabs
+  var tabAll   = document.getElementById('tab-all');
+  var tabSaved = document.getElementById('tab-saved');
+  if (tabAll)   tabAll.addEventListener('click',   function() { _setTab(false); });
+  if (tabSaved) tabSaved.addEventListener('click',  function() { _setTab(true);  });
 
   // "+ List Your Place" button
   var listBtn = document.getElementById('btn-list-place');
   if (listBtn) {
-    listBtn.addEventListener('click', function() { createModal.open(); });
+    listBtn.addEventListener('click', function() {
+      if (!LivioUtils.requireLogin()) return;
+      createModal.open();
+    });
   }
 
-  // New listing created → normalize + add to map + refresh
+  // New listing created → normalize, add to AppState, refresh map
   createModal.onSuccess(function(rawListing) {
     var listing = normalizeApartment(rawListing);
     var target  = filterManager.getTargetUniversity();
-    if (target && listing.lat !== null && listing.lng !== null && !isNaN(listing.lat) && !isNaN(listing.lng)) {
-      listing._distanceMi = haversineDistanceMi(listing.lat, listing.lng, target.lat, target.lng);
+    if (target && LivioUtils.isValidCoords(listing.lat, listing.lng)) {
+      listing._distanceMi = LivioUtils.haversineDistanceMi(
+        listing.lat, listing.lng, target.lat, target.lng
+      );
       listing._targetName = target.name;
     }
-    LISTINGS.push(listing);
-    filterManager.listings = LISTINGS;
-    if (listing.lat !== null && listing.lng !== null && !isNaN(listing.lat) && !isNaN(listing.lng)) {
+    AppState.listings.push(listing);
+    filterManager.listings = AppState.listings;
+    if (LivioUtils.isValidCoords(listing.lat, listing.lng)) {
       mapManager.addListingMarkers([listing]);
       mapManager.panTo(listing.lat, listing.lng, 15);
     } else {
@@ -311,31 +366,32 @@ function wireEvents() {
     refreshView();
   });
 
-  // University marker double-clicked → set as target
-  mapManager.onUniversityDblClick(function(university) {
+  // University marker double-clicked → set as distance target
+  bus.subscribe('map:uniDblClicked', function(data) {
+    var university = data.university;
     filterManager.setTargetUniversity(university);
     recomputeDistances(university);
     mapManager.setTargetUniversity(university.name);
     refreshView();
   });
 
-  // Marker hovered → highlight sidebar card
-  mapManager.onMarkerHover(function(listingId, isHovering) {
-    if (isHovering) { cardRenderer.highlightCard(listingId); }
-    else            { cardRenderer.clearHighlight(); }
+  // Map marker hovered → highlight matching sidebar card
+  bus.subscribe('map:markerHovered', function(data) {
+    if (data.isHovering) cardRenderer.highlightCard(data.listingId);
+    else                 cardRenderer.clearHighlight();
   });
 
-  // Marker clicked → open detail modal
-  mapManager.onMarkerClick(function(listingId) { openModal(listingId); });
+  // Map marker clicked → open detail modal
+  bus.subscribe('map:markerClicked', function(data) { openModal(data.listingId); });
 
-  // Card hovered → highlight map marker + open info window
-  cardRenderer.onCardHover(function(listingId, isHovering) {
-    if (isHovering) { mapManager.highlightMarker(listingId); }
-    else            { mapManager.unhighlightMarker(); }
+  // Sidebar card hovered → highlight map marker + open info window
+  bus.subscribe('card:hovered', function(data) {
+    if (data.isHovering) mapManager.highlightMarker(data.listingId);
+    else                 mapManager.unhighlightMarker();
   });
 
-  // Card clicked → open detail modal
-  cardRenderer.onCardClick(function(listingId) { openModal(listingId); });
+  // Sidebar card clicked → open detail modal
+  bus.subscribe('card:clicked', function(data) { openModal(data.listingId); });
 }
 
 // ── Init ─────────────────────────────────────────────
@@ -345,15 +401,19 @@ function init() {
 
   Promise.all([fetchListings(), fetchUniversities()])
     .then(function(results) {
-      LISTINGS     = results[0];
-      UNIVERSITIES = results[1];
-      log(LISTINGS.length + ' listings, ' + UNIVERSITIES.length + ' universities');
+      AppState.listings     = results[0];
+      AppState.universities = results[1];
+      log(AppState.listings.length + ' listings, ' + AppState.universities.length + ' universities');
 
-      mapManager   = new MapManager();
-      cardRenderer = new CardRenderer('listings-container', 'listings-count');
-      filterManager= new FilterManager('filter-container', LISTINGS, UNIVERSITIES);
+      bus          = new EventBus();
+      mapManager   = new MapManager(bus);
+      cardRenderer = new CardRenderer('listings-container', 'listings-count', bus);
+      filterManager= new FilterManager('filter-container', AppState.listings, AppState.universities, bus);
       modal        = new ListingModal('detail-modal');
       createModal  = new CreateListingModal('create-listing-modal');
+
+      // Load favorite status once listings are available
+      if (typeof checkFavoriteStatus === 'function') checkFavoriteStatus();
 
       var defaultTarget = filterManager.getTargetUniversity();
       if (defaultTarget) { recomputeDistances(defaultTarget); }
@@ -363,10 +423,10 @@ function init() {
         : DEFAULT_CENTER;
       mapManager.init('map-container', mapCenter, MAP_ZOOM);
 
-      UNIVERSITIES.forEach(function(uni) { mapManager.addUniversityMarker(uni); });
+      AppState.universities.forEach(function(uni) { mapManager.addUniversityMarker(uni); });
       if (defaultTarget) mapManager.setTargetUniversity(defaultTarget.name);
 
-      mapManager.addListingMarkers(LISTINGS);
+      mapManager.addListingMarkers(AppState.listings);
 
       wireEvents();
       log('=== Init complete ===');

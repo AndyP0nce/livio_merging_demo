@@ -5,7 +5,7 @@
  *
  * Adapted for Livio's Django REST Framework API:
  *  - POST to /apartments/api/apartments/ (not /api/listings/)
- *  - Django CSRF token sent via X-CSRFToken header
+ *  - Django CSRF token via X-CSRFToken header (from LivioUtils.getCsrfToken)
  *  - Field names mapped to Livio's serializer format:
  *      price        → monthly_rent
  *      type         → room_type ('entire', 'private', 'shared', 'studio')
@@ -15,6 +15,10 @@
  *      address      → location   (street address)
  *      sqft         → square_feet
  *  - Response normalized back to demo-map shape by apartment_script.js
+ *
+ * The three mapping helpers (_mapRoomType, _mapBedrooms, _mapBathrooms)
+ * are now static class methods rather than module-level functions, keeping
+ * implementation details inside the class.
  */
 
 var AMENITY_OPTIONS = [
@@ -23,58 +27,19 @@ var AMENITY_OPTIONS = [
   'Bike Storage', 'Backyard', 'Doorman',
 ];
 
-// Helper: read Django CSRF token from cookie
-function _getCsrfToken() {
-  const name = 'csrftoken';
-  const cookies = document.cookie.split(';');
-  for (var i = 0; i < cookies.length; i++) {
-    var c = cookies[i].trim();
-    if (c.startsWith(name + '=')) return decodeURIComponent(c.slice(name.length + 1));
-  }
-  return '';
-}
-
-// Map the form's "type" dropdown value to Livio's room_type choices
-function _mapRoomType(type) {
-  var map = {
-    'Apartment':    'entire',
-    'House':        'entire',
-    'Studio':       'studio',
-    'Condo':        'entire',
-    'Private Room': 'private',
-    'Shared Room':  'shared',
-  };
-  return map[type] || 'private';
-}
-
-// Map the form's "bedrooms" value to Livio's bedrooms choices
-function _mapBedrooms(beds) {
-  if (beds === 'Studio' || beds === '0') return '1bed'; // closest Livio option
-  var n = parseInt(beds, 10) || 1;
-  if (n >= 4) return '4bed';
-  return n + 'bed';
-}
-
-// Map the form's "bathrooms" value to Livio's bathrooms choices
-function _mapBathrooms(baths) {
-  var n = parseFloat(baths) || 1;
-  if (n >= 3) return '3bath';
-  if (n >= 2) return '2bath';
-  return '1bath';
-}
-
 class CreateListingModal {
   constructor(containerId) {
-    this.container     = document.getElementById(containerId);
-    this._onSuccess    = null;
-    this._submitting   = false;
-    this._autocomplete = null;
-    this._selectedPlace = null;
+    this.container        = document.getElementById(containerId);
+    this._onSuccess       = null;
+    this._submitting      = false;
+    this._autocomplete    = null;
+    this._selectedPlace   = null;
+    this._uploadedImageUrl = null; // S3 URL set after a successful image upload
 
     this._render();
     this._bindEvents();
 
-    // Defer address autocomplete init until Google Maps is ready
+    // Defer address autocomplete init until Google Maps Places is ready
     var self = this;
     var waitForMaps = setInterval(function() {
       if (window.google && window.google.maps && window.google.maps.places) {
@@ -83,6 +48,8 @@ class CreateListingModal {
       }
     }, 200);
   }
+
+  // ── Public API ──────────────────────────────────
 
   open() {
     this.container.classList.add('create-modal--open');
@@ -97,14 +64,51 @@ class CreateListingModal {
 
   isOpen() { return this.container.classList.contains('create-modal--open'); }
 
+  /** @param {Function} cb - called with the raw API response on success */
   onSuccess(cb) { this._onSuccess = cb; }
 
+  // ── Static field mappers ─────────────────────────
+  //   Previously module-level functions; now co-located with the class.
+
+  /** Map form "type" dropdown value → Livio room_type API value. */
+  static _mapRoomType(type) {
+    const map = {
+      'Apartment':    'entire',
+      'House':        'entire',
+      'Studio':       'studio',
+      'Condo':        'entire',
+      'Private Room': 'private',
+      'Shared Room':  'shared',
+    };
+    return map[type] || 'private';
+  }
+
+  /** Map form "bedrooms" value → Livio bedrooms API value. */
+  static _mapBedrooms(beds) {
+    if (beds === 'Studio' || beds === '0') return '1bed'; // closest Livio option
+    const n = parseInt(beds, 10) || 1;
+    if (n >= 4) return '4bed';
+    return n + 'bed';
+  }
+
+  /** Map form "bathrooms" value → Livio bathrooms API value. */
+  static _mapBathrooms(baths) {
+    const n = parseFloat(baths) || 1;
+    if (n >= 3) return '3bath';
+    if (n >= 2) return '2bath';
+    return '1bath';
+  }
+
+  // ── Render ───────────────────────────────────────
+
   _render() {
-    var amenityChecks = AMENITY_OPTIONS.map(function(a) {
-      return '<label class="create-modal__check">' +
-               '<input type="checkbox" name="amenities" value="' + a + '"/>' +
-               '<span>' + a + '</span>' +
-             '</label>';
+    const amenityChecks = AMENITY_OPTIONS.map(function(a) {
+      return (
+        '<label class="create-modal__check">' +
+          '<input type="checkbox" name="amenities" value="' + a + '"/>' +
+          '<span>' + a + '</span>' +
+        '</label>'
+      );
     }).join('');
 
     this.container.innerHTML =
@@ -205,6 +209,26 @@ class CreateListingModal {
               '<div class="create-modal__checks">' + amenityChecks + '</div>' +
             '</div>' +
 
+            '<div class="create-modal__section">' +
+              '<label class="create-modal__label" for="cl-image">Listing Photo (optional)</label>' +
+              '<div class="create-modal__upload" id="cl-upload-area">' +
+                '<input type="file" id="cl-image" name="image" accept="image/jpeg,image/png,image/webp" class="create-modal__file-input" />' +
+                '<label for="cl-image" class="create-modal__upload-label" id="cl-upload-label">' +
+                  '<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin-bottom:6px">' +
+                    '<path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>' +
+                    '<polyline points="17 8 12 3 7 8"/>' +
+                    '<line x1="12" y1="3" x2="12" y2="15"/>' +
+                  '</svg>' +
+                  '<span id="cl-upload-text">Click to choose a photo</span>' +
+                '</label>' +
+                '<div id="cl-image-preview" class="create-modal__img-preview" style="display:none;">' +
+                  '<img id="cl-preview-img" src="" alt="Preview" class="create-modal__preview-img" />' +
+                  '<button type="button" id="cl-remove-image" class="create-modal__remove-img" aria-label="Remove photo">&times;</button>' +
+                  '<span id="cl-upload-status" class="create-modal__upload-status"></span>' +
+                '</div>' +
+              '</div>' +
+            '</div>' +
+
             '<div id="create-error" class="create-modal__error" style="display:none;"></div>' +
 
             '<div class="create-modal__actions">' +
@@ -216,8 +240,10 @@ class CreateListingModal {
       '</div>';
   }
 
+  // ── Event binding ────────────────────────────────
+
   _bindEvents() {
-    var self = this;
+    const self = this;
     document.getElementById('create-close').addEventListener('click',    function() { self.close(); });
     document.getElementById('create-backdrop').addEventListener('click', function() { self.close(); });
     document.getElementById('create-cancel').addEventListener('click',   function() { self.close(); });
@@ -229,12 +255,97 @@ class CreateListingModal {
     document.getElementById('create-listing-form').addEventListener('submit', function(e) {
       self._handleSubmit(e);
     });
+
+    // Image file input
+    document.getElementById('cl-image').addEventListener('change', function(e) {
+      self._handleImageSelect(e.target.files[0]);
+    });
+    document.getElementById('cl-remove-image').addEventListener('click', function() {
+      self._clearImageUpload();
+    });
   }
 
+  // ── Image upload ─────────────────────────────────
+
+  _handleImageSelect(file) {
+    if (!file) return;
+
+    // Show preview
+    const reader = new FileReader();
+    const self = this;
+    reader.onload = function(e) {
+      document.getElementById('cl-preview-img').src = e.target.result;
+      document.getElementById('cl-image-preview').style.display = 'flex';
+      document.getElementById('cl-upload-label').style.display = 'none';
+      document.getElementById('cl-upload-status').textContent = 'Ready to upload';
+      document.getElementById('cl-upload-status').className = 'create-modal__upload-status';
+      self._uploadedImageUrl = null; // reset until upload completes
+    };
+    reader.readAsDataURL(file);
+  }
+
+  _clearImageUpload() {
+    document.getElementById('cl-image').value = '';
+    document.getElementById('cl-preview-img').src = '';
+    document.getElementById('cl-image-preview').style.display = 'none';
+    document.getElementById('cl-upload-label').style.display = 'flex';
+    document.getElementById('cl-upload-status').textContent = '';
+    this._uploadedImageUrl = null;
+  }
+
+  async _uploadImageToS3(file) {
+    const statusEl = document.getElementById('cl-upload-status');
+    statusEl.textContent = 'Uploading…';
+    statusEl.className = 'create-modal__upload-status create-modal__upload-status--uploading';
+
+    try {
+      const token = localStorage.getItem('access_token');
+      const res = await fetch('/apartments/api/upload-url/', {
+        method: 'POST',
+        headers: {
+          'Content-Type':  'application/json',
+          'X-CSRFToken':   LivioUtils.getCsrfToken(),
+          'Authorization': 'Bearer ' + token,
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          fileName:   file.name,
+          fileType:   file.type,
+          expiration: 300,
+        }),
+      });
+
+      if (!res.ok) throw new Error('Could not get upload URL (HTTP ' + res.status + ')');
+
+      const { presignedURL, imageURL } = await res.json();
+
+      // Upload directly to S3 (no Django in the loop)
+      const s3Res = await fetch(presignedURL, {
+        method:  'PUT',
+        headers: { 'Content-Type': file.type },
+        body:    file,
+      });
+
+      if (!s3Res.ok) throw new Error('S3 upload failed (HTTP ' + s3Res.status + ')');
+
+      this._uploadedImageUrl = imageURL;
+      statusEl.textContent = 'Photo uploaded ✓';
+      statusEl.className = 'create-modal__upload-status create-modal__upload-status--done';
+      return imageURL;
+
+    } catch (err) {
+      statusEl.textContent = 'Upload failed: ' + err.message;
+      statusEl.className = 'create-modal__upload-status create-modal__upload-status--error';
+      throw err;
+    }
+  }
+
+  // ── Google Places address autocomplete ───────────
+
   _initAddressAutocomplete() {
-    var addressInput = document.getElementById('cl-address');
+    const addressInput = document.getElementById('cl-address');
     if (!addressInput) return;
-    var self = this;
+    const self = this;
 
     this._autocomplete = new google.maps.places.Autocomplete(addressInput, {
       types: ['address'],
@@ -243,7 +354,7 @@ class CreateListingModal {
     });
 
     this._autocomplete.addListener('place_changed', function() {
-      var place = self._autocomplete.getPlace();
+      const place = self._autocomplete.getPlace();
       if (!place.geometry) return;
 
       self._selectedPlace = {
@@ -251,10 +362,9 @@ class CreateListingModal {
         lng: Math.round(place.geometry.location.lng() * 1000000) / 1000000,
       };
 
-      var streetNumber = '', route = '', city = '', state = '', zip = '';
-      for (var i = 0; i < place.address_components.length; i++) {
-        var comp = place.address_components[i];
-        var type = comp.types[0];
+      let streetNumber = '', route = '', city = '', state = '', zip = '';
+      for (const comp of place.address_components) {
+        const type = comp.types[0];
         if (type === 'street_number') streetNumber = comp.long_name;
         if (type === 'route')         route        = comp.long_name;
         if (type === 'locality')      city         = comp.long_name;
@@ -263,53 +373,60 @@ class CreateListingModal {
       }
 
       addressInput.value = (streetNumber + ' ' + route).trim();
-      var cityEl  = document.getElementById('cl-city');  if (cityEl)  cityEl.value  = city;
-      var stateEl = document.getElementById('cl-state'); if (stateEl) stateEl.value = state || 'CA';
-      var zipEl   = document.getElementById('cl-zip');   if (zipEl)   zipEl.value   = zip;
+      const cityEl  = document.getElementById('cl-city');  if (cityEl)  cityEl.value  = city;
+      const stateEl = document.getElementById('cl-state'); if (stateEl) stateEl.value = state || 'CA';
+      const zipEl   = document.getElementById('cl-zip');   if (zipEl)   zipEl.value   = zip;
     });
 
     addressInput.addEventListener('input', function() { self._selectedPlace = null; });
   }
 
+  // ── Form helpers ─────────────────────────────────
+
   _resetForm() {
-    var form = document.getElementById('create-listing-form');
+    const form = document.getElementById('create-listing-form');
     if (form) form.reset();
-    var stateEl = document.getElementById('cl-state'); if (stateEl) stateEl.value = 'CA';
+    const stateEl = document.getElementById('cl-state'); if (stateEl) stateEl.value = 'CA';
     this._selectedPlace = null;
+    this._uploadedImageUrl = null;
+    this._clearImageUpload();
     this._setError('');
     this._setSubmitting(false);
   }
 
   _setSubmitting(loading) {
     this._submitting = loading;
-    var btn = document.getElementById('create-submit');
+    const btn = document.getElementById('create-submit');
     if (btn) { btn.disabled = loading; btn.textContent = loading ? 'Posting...' : 'Post Listing'; }
   }
 
   _setError(msg) {
-    var el = document.getElementById('create-error');
+    const el = document.getElementById('create-error');
     if (!el) return;
     if (msg) { el.textContent = msg; el.style.display = 'block'; }
     else      { el.style.display = 'none'; el.textContent = ''; }
   }
 
+  // ── Form submission ──────────────────────────────
+
   async _handleSubmit(e) {
     e.preventDefault();
     if (this._submitting) return;
 
-    var form     = document.getElementById('create-listing-form');
-    var title    = form.title.value.trim();
-    var type     = form.type.value;
-    var bedrooms = form.bedrooms.value;
-    var bathrooms = form.bathrooms.value;
-    var price    = parseFloat(form.price.value);
-    var sqft     = form.sqft.value ? parseInt(form.sqft.value, 10) : null;
-    var address  = form.address.value.trim();
-    var city     = form.city.value.trim();
-    var state    = form.state.value.trim() || 'CA';
-    var zip_code = form.zip_code.value.trim();
-    var description = form.description.value.trim();
-    var amenities = Array.from(form.querySelectorAll('input[name="amenities"]:checked')).map(function(cb) { return cb.value; });
+    const form      = document.getElementById('create-listing-form');
+    const title     = form.title.value.trim();
+    const type      = form.type.value;
+    const bedrooms  = form.bedrooms.value;
+    const bathrooms = form.bathrooms.value;
+    const price     = parseFloat(form.price.value);
+    const sqft      = form.sqft.value ? parseInt(form.sqft.value, 10) : null;
+    const address   = form.address.value.trim();
+    const city      = form.city.value.trim();
+    const state     = form.state.value.trim() || 'CA';
+    const zip_code  = form.zip_code.value.trim();
+    const description = form.description.value.trim();
+    const amenities = Array.from(form.querySelectorAll('input[name="amenities"]:checked'))
+      .map((cb) => cb.value);
 
     if (!title)               return this._setError('Listing title is required.');
     if (!type)                return this._setError('Property type is required.');
@@ -323,13 +440,24 @@ class CreateListingModal {
     this._setError('');
     this._setSubmitting(true);
 
-    var lat = null, lng = null;
+    // Upload image to S3 first (if user selected a file and it hasn't been uploaded yet)
+    const imageFile = document.getElementById('cl-image').files[0];
+    if (imageFile && !this._uploadedImageUrl) {
+      try {
+        await this._uploadImageToS3(imageFile);
+      } catch (uploadErr) {
+        // Non-fatal: warn but continue without image
+        console.warn('[CreateListing] Image upload failed:', uploadErr.message, '— posting without photo.');
+      }
+    }
+
+    let lat = null, lng = null;
     if (this._selectedPlace) {
       lat = this._selectedPlace.lat;
       lng = this._selectedPlace.lng;
     } else {
       try {
-        var coords = await this._geocode(address + ', ' + city + ', ' + state + ' ' + zip_code);
+        const coords = await this._geocode(address + ', ' + city + ', ' + state + ' ' + zip_code);
         lat = Math.round(coords.lat * 1000000) / 1000000;
         lng = Math.round(coords.lng * 1000000) / 1000000;
       } catch (geocodeErr) {
@@ -337,43 +465,56 @@ class CreateListingModal {
       }
     }
 
-    // Map to Livio's DRF serializer field names
-    var body = {
+    // Map form values → Livio DRF serializer field names
+    const body = {
       title:        title,
-      location:     address,          // Livio uses 'location' for street address
-      city:         city,
-      state:        state,
-      zip_code:     zip_code,
-      description:  description,
-      monthly_rent: price,            // Livio's field name
-      room_type:    _mapRoomType(type),
-      bedrooms:     _mapBedrooms(bedrooms),
-      bathrooms:    _mapBathrooms(bathrooms),
-      amenities:    amenities.join(','),  // Livio stores as comma-separated string
+      location:     address,
+      city,
+      state,
+      zip_code,
+      description,
+      monthly_rent: price,
+      room_type:    CreateListingModal._mapRoomType(type),
+      bedrooms:     CreateListingModal._mapBedrooms(bedrooms),
+      bathrooms:    CreateListingModal._mapBathrooms(bathrooms),
+      amenities:    amenities.join(','),
       is_active:    true,
     };
     if (lat !== null)  body.latitude    = lat;
     if (lng !== null)  body.longitude   = lng;
     if (sqft !== null) body.square_feet = sqft;
+    if (this._uploadedImageUrl) body.image_url = this._uploadedImageUrl;
 
     try {
-      var response = await fetch('/apartments/api/apartments/', {
+      const token = localStorage.getItem('access_token');
+      if (!token) {
+        window.location.href = '/login/?next=' + encodeURIComponent(window.location.pathname);
+        return;
+      }
+
+      const response = await fetch('/apartments/api/apartments/', {
         method:  'POST',
         headers: {
-          'Content-Type': 'application/json',
-          'X-CSRFToken':  _getCsrfToken(),
+          'Content-Type':  'application/json',
+          'X-CSRFToken':   LivioUtils.getCsrfToken(),   // shared utility; no duplicate needed
+          'Authorization': 'Bearer ' + token,
         },
         credentials: 'include',
         body: JSON.stringify(body),
       });
 
       if (!response.ok) {
-        var errData = await response.json().catch(function() { return {}; });
-        var msg = this._formatApiError(errData) || ('HTTP ' + response.status);
+        if (response.status === 401) {
+          localStorage.removeItem('access_token');
+          window.location.href = '/login/?next=' + encodeURIComponent(window.location.pathname);
+          return;
+        }
+        const errData = await response.json().catch(function() { return {}; });
+        const msg = this._formatApiError(errData) || ('HTTP ' + response.status);
         throw new Error(msg);
       }
 
-      var newListing = await response.json();
+      const newListing = await response.json();
       this.close();
       if (this._onSuccess) this._onSuccess(newListing);
 
@@ -386,10 +527,10 @@ class CreateListingModal {
 
   _formatApiError(errData) {
     if (!errData || typeof errData !== 'object') return '';
-    var lines = [];
-    for (var field in errData) {
-      var msgs = errData[field];
-      var text = Array.isArray(msgs) ? msgs.join(' ') : String(msgs);
+    const lines = [];
+    for (const field in errData) {
+      const msgs = errData[field];
+      const text = Array.isArray(msgs) ? msgs.join(' ') : String(msgs);
       lines.push(field === 'non_field_errors' ? text : field + ': ' + text);
     }
     return lines.join(' | ');
@@ -397,10 +538,10 @@ class CreateListingModal {
 
   _geocode(address) {
     return new Promise(function(resolve, reject) {
-      var geocoder = new google.maps.Geocoder();
-      geocoder.geocode({ address: address }, function(results, status) {
+      const geocoder = new google.maps.Geocoder();
+      geocoder.geocode({ address }, function(results, status) {
         if (status === 'OK' && results.length > 0) {
-          var loc = results[0].geometry.location;
+          const loc = results[0].geometry.location;
           resolve({ lat: loc.lat(), lng: loc.lng() });
         } else {
           reject(new Error('Geocoder status: ' + status));

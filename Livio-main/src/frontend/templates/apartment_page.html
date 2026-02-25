@@ -14,6 +14,11 @@
 
 {% block content %}
 
+<!-- Blurred background image (same as home screen) -->
+<div class="background">
+  <img src="{% static 'images/bg2.jpg' %}" alt="" aria-hidden="true" />
+</div>
+
 <!-- ── Zillow-style two-column layout ───────────────── -->
 <main class="apt-app-layout">
 
@@ -22,9 +27,14 @@
     <div class="listings-panel__header">
       <div class="listings-panel__header-text">
         <h2 class="listings-panel__title" id="listings-count">Loading...</h2>
-        <p class="listings-panel__subtitle">in current map view</p>
+        <p class="listings-panel__subtitle" id="listings-subtitle">in current map view</p>
       </div>
       <button class="apt-list-btn" id="btn-list-place">+ List Your Place</button>
+    </div>
+    <!-- All / Saved tabs -->
+    <div class="listings-panel__tabs">
+      <button class="listings-panel__tab listings-panel__tab--active" id="tab-all">All</button>
+      <button class="listings-panel__tab" id="tab-saved">♥ Saved</button>
     </div>
     <!-- CardRenderer renders listing cards here -->
     <div class="listings-panel__list" id="listings-container"></div>
@@ -59,12 +69,20 @@
   JS modules converted from ES-module format to regular scripts.
   Load order matters: each module must be present before apartment_script.js
   initializes them.
+
+  apartment_utils.js    – shared pure helpers (LivioUtils)
+  apartment_event_bus.js – pub/sub EventBus used by all modules
+  (remaining modules depend on both of the above)
 -->
+<script src="{% static 'js/apartment_utils.js' %}"></script>
+<script src="{% static 'js/apartment_event_bus.js' %}"></script>
 <script src="{% static 'js/apartment_map_manager.js' %}"></script>
 <script src="{% static 'js/apartment_cards_renderer.js' %}"></script>
 <script src="{% static 'js/apartment_filter_manager.js' %}"></script>
 <script src="{% static 'js/apartment_listing_detail.js' %}"></script>
 <script src="{% static 'js/apartment_create_modal.js' %}"></script>
+<!-- Favorites management + toast notifications -->
+<script src="{% static 'js/api_integration.js' %}"></script>
 <!-- Entry point: fetches data, wires all modules together -->
 <script src="{% static 'js/apartment_script.js' %}"></script>
 

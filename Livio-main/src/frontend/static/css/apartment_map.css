@@ -115,7 +115,7 @@
   z-index: 7;
 }
 
-.uni-marker--target::after { border-top-color: #1a56db; }
+.uni-marker--target::after { border-top-color: #f59e0b; }
 
 /* ── Google Maps InfoWindow overrides ───────────────── */
 .gm-style-iw-c {
