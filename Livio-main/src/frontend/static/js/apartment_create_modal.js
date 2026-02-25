@@ -31,10 +31,12 @@ class CreateListingModal {
   constructor(containerId) {
     this.container        = document.getElementById(containerId);
     this._onSuccess       = null;
+    this._onEditSuccess   = null;
     this._submitting      = false;
     this._autocomplete    = null;
     this._selectedPlace   = null;
     this._uploadedImageUrl = null; // S3 URL set after a successful image upload
+    this._editingId       = null;  // non-null when editing an existing listing
 
     this._render();
     this._bindEvents();
@@ -52,20 +54,97 @@ class CreateListingModal {
   // ── Public API ──────────────────────────────────
 
   open() {
+    this._editingId = null;
     this.container.classList.add('create-modal--open');
     document.body.style.overflow = 'hidden';
     this._resetForm();
+    document.querySelector('.create-modal__title').textContent = 'List Your Place';
+    document.getElementById('create-submit').textContent = 'Post Listing';
+  }
+
+  /**
+   * Open the modal pre-filled with an existing listing for editing.
+   * @param {object} listing - normalized listing object from AppState
+   */
+  openForEdit(listing) {
+    this._editingId = listing.id;
+    this.container.classList.add('create-modal--open');
+    document.body.style.overflow = 'hidden';
+    this._resetForm();
+
+    // Update header/button labels
+    document.querySelector('.create-modal__title').textContent = 'Edit Your Listing';
+    document.getElementById('create-submit').textContent = 'Save Changes';
+
+    // Pre-fill form fields
+    const form = document.getElementById('create-listing-form');
+    form.title.value       = listing.title || '';
+    form.description.value = listing.description || '';
+    form.price.value       = listing.price || '';
+    if (listing.sqft) form.sqft.value = listing.sqft;
+
+    // Address — split address string back into parts (best-effort)
+    const addrParts = (listing.address || '').split(',').map(function(s) { return s.trim(); });
+    form.address.value  = addrParts[0] || '';
+    if (addrParts[1]) { const cityEl = document.getElementById('cl-city');   if (cityEl)  cityEl.value  = addrParts[1]; }
+    if (addrParts[2]) { const stateEl = document.getElementById('cl-state'); if (stateEl) stateEl.value = addrParts[2]; }
+
+    // Type reverse-map (display label → form option value)
+    const typeReverseMap = {
+      'Private Room': 'Private Room',
+      'Shared Room':  'Shared Room',
+      'Studio':       'Studio',
+      'Entire Place': 'Apartment',
+      'Apartment':    'Apartment',
+    };
+    const typeEl = document.getElementById('cl-type');
+    if (typeEl) typeEl.value = typeReverseMap[listing.type] || 'Apartment';
+
+    // Bedrooms reverse-map ('1bed' → '1', etc.)
+    const bedsEl = document.getElementById('cl-beds');
+    if (bedsEl) {
+      if (listing.bedrooms === 0) bedsEl.value = 'Studio';
+      else if (listing.bedrooms >= 4) bedsEl.value = '4';
+      else bedsEl.value = String(listing.bedrooms || 1);
+    }
+
+    // Bathrooms reverse-map
+    const bathsEl = document.getElementById('cl-baths');
+    if (bathsEl) bathsEl.value = String(listing.bathrooms || 1);
+
+    // Amenities — check matching checkboxes
+    const checkedAmenities = new Set((listing.amenities || []).map(function(a) { return a.toLowerCase(); }));
+    form.querySelectorAll('input[name="amenities"]').forEach(function(cb) {
+      cb.checked = checkedAmenities.has(cb.value.toLowerCase());
+    });
+
+    // Show existing image if present
+    if (listing.image_url) {
+      this._uploadedImageUrl = listing.image_url;
+      const previewImg    = document.getElementById('cl-preview-img');
+      const previewBox    = document.getElementById('cl-image-preview');
+      const uploadLabel   = document.getElementById('cl-upload-label');
+      const statusEl      = document.getElementById('cl-upload-status');
+      if (previewImg)  previewImg.src = listing.image_url;
+      if (previewBox)  previewBox.style.display = 'flex';
+      if (uploadLabel) uploadLabel.style.display = 'none';
+      if (statusEl)    statusEl.textContent = 'Current photo';
+    }
   }
 
   close() {
     this.container.classList.remove('create-modal--open');
     document.body.style.overflow = '';
+    this._editingId = null;
   }
 
   isOpen() { return this.container.classList.contains('create-modal--open'); }
 
-  /** @param {Function} cb - called with the raw API response on success */
+  /** @param {Function} cb - called with the raw API response on a successful create */
   onSuccess(cb) { this._onSuccess = cb; }
+
+  /** @param {Function} cb - called with the raw API response on a successful edit */
+  onEditSuccess(cb) { this._onEditSuccess = cb; }
 
   // ── Static field mappers ─────────────────────────
   //   Previously module-level functions; now co-located with the class.
@@ -397,7 +476,13 @@ class CreateListingModal {
   _setSubmitting(loading) {
     this._submitting = loading;
     const btn = document.getElementById('create-submit');
-    if (btn) { btn.disabled = loading; btn.textContent = loading ? 'Posting...' : 'Post Listing'; }
+    if (!btn) return;
+    btn.disabled = loading;
+    if (loading) {
+      btn.textContent = this._editingId ? 'Saving...' : 'Posting...';
+    } else {
+      btn.textContent = this._editingId ? 'Save Changes' : 'Post Listing';
+    }
   }
 
   _setError(msg) {
@@ -485,6 +570,11 @@ class CreateListingModal {
     if (sqft !== null) body.square_feet = sqft;
     if (this._uploadedImageUrl) body.image_url = this._uploadedImageUrl;
 
+    const isEdit = this._editingId !== null;
+    const url    = isEdit
+      ? '/apartments/api/apartments/' + this._editingId + '/'
+      : '/apartments/api/apartments/';
+
     try {
       const token = localStorage.getItem('access_token');
       if (!token) {
@@ -492,11 +582,11 @@ class CreateListingModal {
         return;
       }
 
-      const response = await fetch('/apartments/api/apartments/', {
-        method:  'POST',
+      const response = await fetch(url, {
+        method:  isEdit ? 'PUT' : 'POST',
         headers: {
           'Content-Type':  'application/json',
-          'X-CSRFToken':   LivioUtils.getCsrfToken(),   // shared utility; no duplicate needed
+          'X-CSRFToken':   LivioUtils.getCsrfToken(),
           'Authorization': 'Bearer ' + token,
         },
         credentials: 'include',
@@ -514,12 +604,16 @@ class CreateListingModal {
         throw new Error(msg);
       }
 
-      const newListing = await response.json();
+      const savedListing = await response.json();
       this.close();
-      if (this._onSuccess) this._onSuccess(newListing);
+      if (isEdit) {
+        if (this._onEditSuccess) this._onEditSuccess(savedListing);
+      } else {
+        if (this._onSuccess) this._onSuccess(savedListing);
+      }
 
     } catch (err) {
-      this._setError('Failed to post listing: ' + err.message);
+      this._setError((isEdit ? 'Failed to save changes: ' : 'Failed to post listing: ') + err.message);
     } finally {
       this._setSubmitting(false);
     }

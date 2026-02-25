@@ -148,6 +148,7 @@ function normalizeApartment(raw) {
     available:   raw.is_active !== false,
     imageColor:  CARD_COLORS[raw.id % CARD_COLORS.length],
     image_url:   raw.image_url || null,
+    is_owner:    raw.is_owner === true,
   };
 }
 
@@ -219,6 +220,27 @@ function fetchUniversities() {
       err('fetchUniversities failed:', e.message);
       return [];
     });
+}
+
+// ── Owner CRUD helpers ────────────────────────────
+
+function deleteListing(listingId) {
+  var token = localStorage.getItem('access_token');
+  return fetch('/apartments/api/apartments/' + listingId + '/', {
+    method:      'DELETE',
+    headers: {
+      'Authorization': 'Bearer ' + token,
+      'X-CSRFToken':   LivioUtils.getCsrfToken(),
+    },
+    credentials: 'include',
+  });
+}
+
+function removeListingFromState(listingId) {
+  AppState.listings = AppState.listings.filter(function(l) { return l.id !== listingId; });
+  filterManager.listings = AppState.listings;
+  mapManager.removeListingMarker(listingId);
+  refreshView();
 }
 
 // ── View helpers ─────────────────────────────────────
@@ -364,6 +386,66 @@ function wireEvents() {
       warn('New listing has no coordinates — skipping map marker.');
     }
     refreshView();
+  });
+
+  // Listing edited → update in AppState, refresh marker + sidebar
+  createModal.onEditSuccess(function(rawListing) {
+    var updated = normalizeApartment(rawListing);
+    var target  = filterManager.getTargetUniversity();
+    if (target && LivioUtils.isValidCoords(updated.lat, updated.lng)) {
+      updated._distanceMi = LivioUtils.haversineDistanceMi(
+        updated.lat, updated.lng, target.lat, target.lng
+      );
+      updated._targetName = target.name;
+    }
+    // Replace the existing listing in state
+    for (var i = 0; i < AppState.listings.length; i++) {
+      if (AppState.listings[i].id === updated.id) {
+        AppState.listings[i] = updated;
+        break;
+      }
+    }
+    filterManager.listings = AppState.listings;
+    // Rebuild map marker (remove old, add new)
+    mapManager.removeListingMarker(updated.id);
+    if (LivioUtils.isValidCoords(updated.lat, updated.lng)) {
+      mapManager.addListingMarkers([updated]);
+    }
+    refreshView();
+  });
+
+  // Edit listing (from card or detail modal)
+  bus.subscribe('listing:edit', function(data) {
+    var listing = AppState.findListing(data.listingId);
+    if (!listing) return;
+    if (modal.isOpen()) modal.close();
+    createModal.openForEdit(listing);
+  });
+
+  // Delete listing (from card or detail modal)
+  bus.subscribe('listing:delete', function(data) {
+    var listing = AppState.findListing(data.listingId);
+    if (!listing) return;
+    if (!window.confirm('Delete "' + listing.title + '"?\nThis cannot be undone.')) return;
+    deleteListing(listing.id).then(function(response) {
+      if (response && (response.ok || response.status === 204)) {
+        if (modal.isOpen()) modal.close();
+        removeListingFromState(listing.id);
+      } else {
+        alert('Failed to delete listing. Please try again.');
+      }
+    }).catch(function(e) {
+      err('Delete failed:', e.message);
+      alert('Error deleting listing: ' + e.message);
+    });
+  });
+
+  // Wire detail modal edit/delete callbacks to the same bus events
+  modal.onEdit(function(listingId) {
+    bus.publish('listing:edit', { listingId: listingId });
+  });
+  modal.onDelete(function(listingId) {
+    bus.publish('listing:delete', { listingId: listingId });
   });
 
   // University marker double-clicked → set as distance target

@@ -370,6 +370,19 @@ class GetUserFavoritesAPI(APIView):
 
 
 
+class GetMyListingsAPI(APIView):
+    """
+    GET /apartments/api/my-listings/
+    Returns all apartment listings owned by the current authenticated user.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        apartments = ApartmentPost.objects.filter(owner=request.user).order_by('-created_at')
+        serializer = ApartmentPostSerializer(apartments, many=True, context={'request': request})
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def apartment_presigned_url(request):

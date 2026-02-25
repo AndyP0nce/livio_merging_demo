@@ -7,6 +7,7 @@ from .views import (
     ToggleFavoriteAPI,
     CheckFavoriteStatusAPI,
     GetUserFavoritesAPI,
+    GetMyListingsAPI,
     UniversityListView,
     apartment_presigned_url,
 )
@@ -32,6 +33,7 @@ urlpatterns = [
     path('api/favorites/toggle/', ToggleFavoriteAPI.as_view(), name='toggle-favorite'),
     path('api/favorites/check/', CheckFavoriteStatusAPI.as_view(), name='check-favorites'),
     path('api/favorites/', GetUserFavoritesAPI.as_view(), name='user-favorites'),
+    path('api/my-listings/', GetMyListingsAPI.as_view(), name='my-listings'),
     path('api/universities/', UniversityListView.as_view(), name='university-list'),
     path('api/upload-url/',   apartment_presigned_url,      name='apartment-upload-url'),
 ]

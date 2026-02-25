@@ -14,12 +14,19 @@ class ListingModal {
     this._currentListing = null;
     this._currentSlide   = 0;
     this._slides         = [];
+    this._onEdit         = null;
+    this._onDelete       = null;
 
     this._render();
     this._bindEvents();
   }
 
   // ── Public API ──────────────────────────────────
+
+  /** @param {Function} cb - called with listingId when Edit is clicked */
+  onEdit(cb)   { this._onEdit   = cb; }
+  /** @param {Function} cb - called with listingId when Delete is clicked */
+  onDelete(cb) { this._onDelete = cb; }
 
   open(listing) {
     this._currentListing = listing;
@@ -178,7 +185,29 @@ class ListingModal {
             <div class="detail-modal__owner-role">Property Owner</div>
           </div>
         </div>
-      </div>`;
+      </div>
+
+      ${listing.is_owner ? `
+      <div class="detail-modal__section detail-modal__owner-actions">
+        <h3 class="detail-modal__section-title">Manage Your Listing</h3>
+        <div class="detail-modal__action-row">
+          <button class="detail-modal__action-btn detail-modal__action-btn--edit" id="modal-edit-btn">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+            Edit Listing
+          </button>
+          <button class="detail-modal__action-btn detail-modal__action-btn--delete" id="modal-delete-btn">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg>
+            Delete Listing
+          </button>
+        </div>
+      </div>` : ''}`;
+
+    // Wire owner action buttons (only present when is_owner)
+    const self = this;
+    const editBtn   = document.getElementById('modal-edit-btn');
+    const deleteBtn = document.getElementById('modal-delete-btn');
+    if (editBtn)   editBtn.addEventListener('click',   function() { if (self._onEdit)   self._onEdit(listing.id);   });
+    if (deleteBtn) deleteBtn.addEventListener('click', function() { if (self._onDelete) self._onDelete(listing.id); });
   }
 
   _updateSlide() {
