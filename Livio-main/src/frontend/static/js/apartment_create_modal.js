@@ -29,11 +29,12 @@ var AMENITY_OPTIONS = [
 
 class CreateListingModal {
   constructor(containerId) {
-    this.container      = document.getElementById(containerId);
-    this._onSuccess     = null;
-    this._submitting    = false;
-    this._autocomplete  = null;
-    this._selectedPlace = null;
+    this.container        = document.getElementById(containerId);
+    this._onSuccess       = null;
+    this._submitting      = false;
+    this._autocomplete    = null;
+    this._selectedPlace   = null;
+    this._uploadedImageUrl = null; // S3 URL set after a successful image upload
 
     this._render();
     this._bindEvents();
@@ -208,6 +209,26 @@ class CreateListingModal {
               '<div class="create-modal__checks">' + amenityChecks + '</div>' +
             '</div>' +
 
+            '<div class="create-modal__section">' +
+              '<label class="create-modal__label" for="cl-image">Listing Photo (optional)</label>' +
+              '<div class="create-modal__upload" id="cl-upload-area">' +
+                '<input type="file" id="cl-image" name="image" accept="image/jpeg,image/png,image/webp" class="create-modal__file-input" />' +
+                '<label for="cl-image" class="create-modal__upload-label" id="cl-upload-label">' +
+                  '<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin-bottom:6px">' +
+                    '<path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>' +
+                    '<polyline points="17 8 12 3 7 8"/>' +
+                    '<line x1="12" y1="3" x2="12" y2="15"/>' +
+                  '</svg>' +
+                  '<span id="cl-upload-text">Click to choose a photo</span>' +
+                '</label>' +
+                '<div id="cl-image-preview" class="create-modal__img-preview" style="display:none;">' +
+                  '<img id="cl-preview-img" src="" alt="Preview" class="create-modal__preview-img" />' +
+                  '<button type="button" id="cl-remove-image" class="create-modal__remove-img" aria-label="Remove photo">&times;</button>' +
+                  '<span id="cl-upload-status" class="create-modal__upload-status"></span>' +
+                '</div>' +
+              '</div>' +
+            '</div>' +
+
             '<div id="create-error" class="create-modal__error" style="display:none;"></div>' +
 
             '<div class="create-modal__actions">' +
@@ -234,6 +255,89 @@ class CreateListingModal {
     document.getElementById('create-listing-form').addEventListener('submit', function(e) {
       self._handleSubmit(e);
     });
+
+    // Image file input
+    document.getElementById('cl-image').addEventListener('change', function(e) {
+      self._handleImageSelect(e.target.files[0]);
+    });
+    document.getElementById('cl-remove-image').addEventListener('click', function() {
+      self._clearImageUpload();
+    });
+  }
+
+  // ── Image upload ─────────────────────────────────
+
+  _handleImageSelect(file) {
+    if (!file) return;
+
+    // Show preview
+    const reader = new FileReader();
+    const self = this;
+    reader.onload = function(e) {
+      document.getElementById('cl-preview-img').src = e.target.result;
+      document.getElementById('cl-image-preview').style.display = 'flex';
+      document.getElementById('cl-upload-label').style.display = 'none';
+      document.getElementById('cl-upload-status').textContent = 'Ready to upload';
+      document.getElementById('cl-upload-status').className = 'create-modal__upload-status';
+      self._uploadedImageUrl = null; // reset until upload completes
+    };
+    reader.readAsDataURL(file);
+  }
+
+  _clearImageUpload() {
+    document.getElementById('cl-image').value = '';
+    document.getElementById('cl-preview-img').src = '';
+    document.getElementById('cl-image-preview').style.display = 'none';
+    document.getElementById('cl-upload-label').style.display = 'flex';
+    document.getElementById('cl-upload-status').textContent = '';
+    this._uploadedImageUrl = null;
+  }
+
+  async _uploadImageToS3(file) {
+    const statusEl = document.getElementById('cl-upload-status');
+    statusEl.textContent = 'Uploading…';
+    statusEl.className = 'create-modal__upload-status create-modal__upload-status--uploading';
+
+    try {
+      const token = localStorage.getItem('access_token');
+      const res = await fetch('/apartments/api/upload-url/', {
+        method: 'POST',
+        headers: {
+          'Content-Type':  'application/json',
+          'X-CSRFToken':   LivioUtils.getCsrfToken(),
+          'Authorization': 'Bearer ' + token,
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          fileName:   file.name,
+          fileType:   file.type,
+          expiration: 300,
+        }),
+      });
+
+      if (!res.ok) throw new Error('Could not get upload URL (HTTP ' + res.status + ')');
+
+      const { presignedURL, imageURL } = await res.json();
+
+      // Upload directly to S3 (no Django in the loop)
+      const s3Res = await fetch(presignedURL, {
+        method:  'PUT',
+        headers: { 'Content-Type': file.type },
+        body:    file,
+      });
+
+      if (!s3Res.ok) throw new Error('S3 upload failed (HTTP ' + s3Res.status + ')');
+
+      this._uploadedImageUrl = imageURL;
+      statusEl.textContent = 'Photo uploaded ✓';
+      statusEl.className = 'create-modal__upload-status create-modal__upload-status--done';
+      return imageURL;
+
+    } catch (err) {
+      statusEl.textContent = 'Upload failed: ' + err.message;
+      statusEl.className = 'create-modal__upload-status create-modal__upload-status--error';
+      throw err;
+    }
   }
 
   // ── Google Places address autocomplete ───────────
@@ -284,6 +388,8 @@ class CreateListingModal {
     if (form) form.reset();
     const stateEl = document.getElementById('cl-state'); if (stateEl) stateEl.value = 'CA';
     this._selectedPlace = null;
+    this._uploadedImageUrl = null;
+    this._clearImageUpload();
     this._setError('');
     this._setSubmitting(false);
   }
@@ -334,6 +440,17 @@ class CreateListingModal {
     this._setError('');
     this._setSubmitting(true);
 
+    // Upload image to S3 first (if user selected a file and it hasn't been uploaded yet)
+    const imageFile = document.getElementById('cl-image').files[0];
+    if (imageFile && !this._uploadedImageUrl) {
+      try {
+        await this._uploadImageToS3(imageFile);
+      } catch (uploadErr) {
+        // Non-fatal: warn but continue without image
+        console.warn('[CreateListing] Image upload failed:', uploadErr.message, '— posting without photo.');
+      }
+    }
+
     let lat = null, lng = null;
     if (this._selectedPlace) {
       lat = this._selectedPlace.lat;
@@ -366,6 +483,7 @@ class CreateListingModal {
     if (lat !== null)  body.latitude    = lat;
     if (lng !== null)  body.longitude   = lng;
     if (sqft !== null) body.square_feet = sqft;
+    if (this._uploadedImageUrl) body.image_url = this._uploadedImageUrl;
 
     try {
       const token = localStorage.getItem('access_token');

@@ -44,14 +44,32 @@ class ListingModal {
 
   // ── Slide generation ─────────────────────────────
 
+  /**
+   * Build the slide array for the gallery.
+   * If the listing has a real image_url (from S3), the first slide shows the
+   * actual photo. All remaining slides use the colour-based placeholders.
+   */
   _generateSlides(listing) {
     const base = listing.imageColor || '#4A90D9';
+    const colorSlides = [
+      { color: base, label: 'Living Area', gradient: 'linear-gradient(135deg, rgba(0,0,0,0.15) 0%, transparent 100%)', imageUrl: null },
+      { color: base, label: 'Kitchen',     gradient: 'linear-gradient(45deg, rgba(255,255,255,0.12) 0%, rgba(0,0,0,0.18) 100%)', imageUrl: null },
+      { color: base, label: 'Bedroom',     gradient: 'linear-gradient(180deg, transparent 0%, rgba(0,0,0,0.22) 100%)', imageUrl: null },
+      { color: base, label: 'Bathroom',    gradient: 'linear-gradient(0deg, rgba(255,255,255,0.08) 0%, rgba(0,0,0,0.12) 100%)', imageUrl: null },
+    ];
+
+    if (listing.image_url) {
+      // Real photo goes first; colour slides follow as additional placeholders
+      return [
+        { color: null, label: 'Main Photo', gradient: 'none', imageUrl: listing.image_url },
+        ...colorSlides,
+      ];
+    }
+
+    // No real photo – show all colour-based slides
     return [
-      { color: base, label: 'Main Photo',  gradient: 'none' },
-      { color: base, label: 'Living Area', gradient: 'linear-gradient(135deg, rgba(0,0,0,0.15) 0%, transparent 100%)' },
-      { color: base, label: 'Kitchen',     gradient: 'linear-gradient(45deg, rgba(255,255,255,0.12) 0%, rgba(0,0,0,0.18) 100%)' },
-      { color: base, label: 'Bedroom',     gradient: 'linear-gradient(180deg, transparent 0%, rgba(0,0,0,0.22) 100%)' },
-      { color: base, label: 'Bathroom',    gradient: 'linear-gradient(0deg, rgba(255,255,255,0.08) 0%, rgba(0,0,0,0.12) 100%)' },
+      { color: base, label: 'Main Photo', gradient: 'none', imageUrl: null },
+      ...colorSlides,
     ];
   }
 
@@ -171,9 +189,14 @@ class ListingModal {
     const slide   = this._slides[this._currentSlide];
     const slideEl = document.getElementById('modal-slide');
     if (slideEl) {
-      slideEl.style.background = slide.gradient !== 'none'
-        ? slide.gradient + ', ' + slide.color
-        : slide.color;
+      if (slide.imageUrl) {
+        // Real photo: use a background-image so it scales and crops nicely
+        slideEl.style.background = `url('${slide.imageUrl}') center/cover no-repeat`;
+      } else if (slide.gradient !== 'none') {
+        slideEl.style.background = slide.gradient + ', ' + slide.color;
+      } else {
+        slideEl.style.background = slide.color;
+      }
     }
     const counterEl = document.getElementById('modal-counter');
     if (counterEl) counterEl.textContent = (this._currentSlide + 1) + ' / ' + this._slides.length;

@@ -95,6 +95,9 @@ function createApartmentCard(apartment) {
     const description  = e(apartment.description);
     const availableFrom = e(apartment.available_from || 'Now');
     const price        = Number(apartment.monthly_rent).toLocaleString();
+    // Use the real S3 image if available, otherwise fall back to a generic placeholder
+    const mainImageSrc = apartment.image_url ||
+        `https://randomuser.me/api/portraits/lego/${apartment.id % 8 + 1}.jpg`;
 
     return `
         <div class="card ${favoriteClass}" tabindex="0">
@@ -107,8 +110,9 @@ function createApartmentCard(apartment) {
 
             <div class="card-front">
                 <div class="image-gallery">
-                    <img src="https://randomuser.me/api/portraits/lego/${apartment.id % 8 + 1}.jpg"
-                         class="apartment-image active" alt="${title}" />
+                    <img src="${mainImageSrc}"
+                         class="apartment-image active" alt="${title}"
+                         onerror="this.src='https://randomuser.me/api/portraits/lego/${apartment.id % 8 + 1}.jpg'" />
                     <div class="image-dots"><span class="dot active"></span></div>
                 </div>
                 <div class="details">
