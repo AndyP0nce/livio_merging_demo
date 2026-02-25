@@ -24,6 +24,7 @@ async function toggleFavorite(apartmentId) {
   try {
     const response = await fetch('/apartments/api/favorites/toggle/', {
       method: 'POST',
+      credentials: 'include',
       headers: {
         'Content-Type': 'application/json',
         'X-CSRFToken': LivioUtils.getCsrfToken(),
@@ -63,9 +64,11 @@ async function checkFavoriteStatus() {
 
     const response = await fetch('/apartments/api/favorites/check/', {
       method: 'POST',
+      credentials: 'include',
       headers: {
         'Content-Type': 'application/json',
         'X-CSRFToken': LivioUtils.getCsrfToken(),
+        'Authorization': 'Bearer ' + localStorage.getItem('access_token'),
       },
       body: JSON.stringify({ apartment_ids: ids }),
     });
