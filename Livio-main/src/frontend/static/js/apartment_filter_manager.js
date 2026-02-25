@@ -8,17 +8,152 @@
  *  - Search bar with autocomplete (city, zip, address, university, Google Places)
  *  - Dropdown filter buttons (Type, Beds, Baths, Price, Sqft, Amenities)
  *  - Active filter chips (with × remove)
+ *
+ * Architecture
+ * ────────────
+ *  FilterState   – pure data object; owns all filter values, address parsers,
+ *                  filter logic, and chip generation.  Has no DOM dependencies.
+ *  FilterManager – owns the DOM; delegates state reads/writes to FilterState.
+ *                  Publishes changes to an optional EventBus.
  */
 
+// ─────────────────────────────────────────────────────────────────────────────
+// FilterState – pure state + logic (no DOM)
+// ─────────────────────────────────────────────────────────────────────────────
+
+class FilterState {
+  constructor() {
+    this.searchQuery = '';
+    this.types       = new Set();
+    this.minBeds     = 0;
+    this.minBaths    = 0;
+    this.priceMin    = 0;
+    this.priceMax    = Infinity;
+    this.sqftMin     = 0;
+    this.sqftMax     = Infinity;
+    this.amenities   = new Set();
+  }
+
+  /** Reset every filter to its default / cleared value. */
+  reset() {
+    this.searchQuery = '';
+    this.types       = new Set();
+    this.minBeds     = 0;
+    this.minBaths    = 0;
+    this.priceMin    = 0;
+    this.priceMax    = Infinity;
+    this.sqftMin     = 0;
+    this.sqftMax     = Infinity;
+    this.amenities   = new Set();
+  }
+
+  // ── Address helpers ───────────────────────────────
+
+  /** Extract city from a comma-separated address string. */
+  static parseCity(address) {
+    const parts = (address || '').split(',');
+    return parts.length >= 2 ? parts[1].trim() : '';
+  }
+
+  /** Extract zip code from an address string. */
+  static parseZip(address) {
+    const match = (address || '').match(/\d{5}$/);
+    return match ? match[0] : '';
+  }
+
+  // ── Filter logic ──────────────────────────────────
+
+  /** Return true if the listing's address matches the current search query. */
+  matchesSearch(listing) {
+    if (!this.searchQuery) return true;
+    const q    = this.searchQuery;
+    const city = FilterState.parseCity(listing.address).toLowerCase();
+    const zip  = FilterState.parseZip(listing.address);
+    const addr = listing.address.toLowerCase();
+    return city.includes(q) || zip.includes(q) || addr.includes(q);
+  }
+
+  /**
+   * Apply all active filters to a listings array.
+   * @param {object[]} listings
+   * @returns {object[]}
+   */
+  applyTo(listings) {
+    return listings.filter((l) => {
+      if (this.searchQuery && !this.matchesSearch(l)) return false;
+      if (this.types.size > 0 && !this.types.has(l.type)) return false;
+      if (l.bedrooms  < this.minBeds)  return false;
+      if (l.bathrooms < this.minBaths) return false;
+      if (l.price < this.priceMin)     return false;
+      if (l.price > this.priceMax)     return false;
+      if ((l.sqft || 0) < this.sqftMin) return false;
+      if (this.sqftMax < Infinity && (l.sqft || Infinity) > this.sqftMax) return false;
+      if (this.amenities.size > 0) {
+        for (const amenity of this.amenities) {
+          if (!(l.amenities || []).includes(amenity)) return false;
+        }
+      }
+      return true;
+    });
+  }
+
+  // ── Chip generation ──────────────────────────────
+
+  /**
+   * Build the list of active-filter chip descriptors for the toolbar.
+   * @returns {{ label: string, key: string, value?: string }[]}
+   */
+  getActiveChips() {
+    const chips = [];
+    for (const type of this.types) chips.push({ label: type, key: 'type', value: type });
+    if (this.minBeds > 0)  chips.push({ label: this.minBeds  + '+ Beds',  key: 'beds'  });
+    if (this.minBaths > 0) chips.push({ label: this.minBaths + '+ Baths', key: 'baths' });
+
+    if (this.priceMin > 0 && this.priceMax < Infinity) {
+      chips.push({ label: '$' + this.priceMin.toLocaleString() + ' – $' + this.priceMax.toLocaleString(), key: 'price' });
+    } else if (this.priceMin > 0) {
+      chips.push({ label: '$' + this.priceMin.toLocaleString() + '+', key: 'price' });
+    } else if (this.priceMax < Infinity) {
+      chips.push({ label: 'Up to $' + this.priceMax.toLocaleString(), key: 'price' });
+    }
+
+    if (this.sqftMin > 0 && this.sqftMax < Infinity) {
+      chips.push({ label: this.sqftMin + ' – ' + this.sqftMax + ' sqft', key: 'sqft' });
+    } else if (this.sqftMin > 0) {
+      chips.push({ label: this.sqftMin + '+ sqft', key: 'sqft' });
+    } else if (this.sqftMax < Infinity) {
+      chips.push({ label: 'Up to ' + this.sqftMax + ' sqft', key: 'sqft' });
+    }
+
+    for (const amenity of this.amenities) chips.push({ label: amenity, key: 'amenity', value: amenity });
+    return chips;
+  }
+}
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+// FilterManager – DOM + UX layer
+// ─────────────────────────────────────────────────────────────────────────────
+
 class FilterManager {
-  constructor(containerId, listings, universities) {
+  /**
+   * @param {string}    containerId  - id of the filter toolbar container element
+   * @param {object[]}  listings     - normalized listing objects
+   * @param {object[]}  universities - university objects
+   * @param {EventBus}  [eventBus]   - optional bus; publishes events when provided
+   */
+  constructor(containerId, listings, universities, eventBus) {
     this.container    = document.getElementById(containerId);
     this.listings     = listings;
     this.universities = universities || [];
-    this._onChange          = null;
-    this._onSearchChange    = null;
-    this._onTargetChange    = null;
-    this._onPlaceSelect     = null;
+    this._bus         = eventBus || null;
+
+    // Backward-compat callback slots (used when no EventBus is present)
+    this._onChange       = null;
+    this._onSearchChange = null;
+    this._onTargetChange = null;
+    this._onPlaceSelect  = null;
+
     this._searchDebounceTimer = null;
     this._currentPanel    = null;
     this._placesService   = null;
@@ -28,74 +163,58 @@ class FilterManager {
       this.universities.find((u) => u.name === 'CSUN') ||
       this.universities[0] || null;
 
+    // Pre-compute unique values for suggestions
     this.allTypes     = [...new Set(listings.map((l) => l.type))].sort();
     this.allAmenities = [...new Set(listings.flatMap((l) => l.amenities))].sort();
-    this.allCities    = [...new Set(listings.map((l) => this._parseCity(l.address)))].filter(Boolean).sort();
-    this.allZips      = [...new Set(listings.map((l) => this._parseZip(l.address)))].filter(Boolean).sort();
+    this.allCities    = [...new Set(listings.map((l) => FilterState.parseCity(l.address)))].filter(Boolean).sort();
+    this.allZips      = [...new Set(listings.map((l) => FilterState.parseZip(l.address)))].filter(Boolean).sort();
 
     this._suggestions = this._buildSuggestions();
 
-    this.state = {
-      searchQuery: '',
-      types: new Set(),
-      minBeds: 0,
-      minBaths: 0,
-      priceMin: 0,
-      priceMax: Infinity,
-      sqftMin: 0,
-      sqftMax: Infinity,
-      amenities: new Set(),
-    };
+    /** @type {FilterState} */
+    this.state = new FilterState();
 
     this._render();
     this._bindEvents();
   }
 
-  _parseCity(address) {
-    const parts = (address || '').split(',');
-    return parts.length >= 2 ? parts[1].trim() : '';
-  }
-
-  _parseZip(address) {
-    const match = (address || '').match(/\d{5}$/);
-    return match ? match[0] : '';
-  }
+  // ── Suggestion building ──────────────────────────
 
   _buildSuggestions() {
     const suggestions = [];
     this.universities.forEach((uni) => {
       suggestions.push({
-        text: uni.name + ' – ' + uni.fullName,
-        type: 'Campus',
-        icon: 'M12 3L1 9l4 2.18v6L12 21l7-3.82v-6L23 9l-11-6z',
+        text:        uni.name + ' – ' + uni.fullName,
+        type:        'Campus',
+        icon:        'M12 3L1 9l4 2.18v6L12 21l7-3.82v-6L23 9l-11-6z',
         searchValue: uni.name.toLowerCase() + ' ' + uni.fullName.toLowerCase(),
-        uniName: uni.name,
+        uniName:     uni.name,
       });
     });
     this.allCities.forEach((city) => {
-      const count = this.listings.filter((l) => this._parseCity(l.address) === city).length;
+      const count = this.listings.filter((l) => FilterState.parseCity(l.address) === city).length;
       suggestions.push({
-        text: city,
-        type: 'City · ' + count + ' listing' + (count !== 1 ? 's' : ''),
-        icon: 'M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z',
+        text:        city,
+        type:        'City · ' + count + ' listing' + (count !== 1 ? 's' : ''),
+        icon:        'M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z',
         searchValue: city.toLowerCase(),
       });
     });
     this.allZips.forEach((zip) => {
-      const sample = this.listings.find((l) => this._parseZip(l.address) === zip);
-      const city = sample ? this._parseCity(sample.address) : '';
+      const sample = this.listings.find((l) => FilterState.parseZip(l.address) === zip);
+      const city   = sample ? FilterState.parseCity(sample.address) : '';
       suggestions.push({
-        text: zip,
-        type: 'Zip Code · ' + city,
-        icon: 'M20 6H10v2h10V6zm0 4H10v2h10v-2zm0 4H10v2h10v-2zM4 6h4v12H4z',
+        text:        zip,
+        type:        'Zip Code · ' + city,
+        icon:        'M20 6H10v2h10V6zm0 4H10v2h10v-2zm0 4H10v2h10v-2zM4 6h4v12H4z',
         searchValue: zip,
       });
     });
     this.listings.forEach((l) => {
       suggestions.push({
-        text: l.address,
-        type: 'Address',
-        icon: 'M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z',
+        text:        l.address,
+        type:        'Address',
+        icon:        'M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z',
         searchValue: l.address.toLowerCase(),
       });
     });
@@ -110,6 +229,8 @@ class FilterManager {
       .filter((s) => s.text.toLowerCase().includes(q) || s.searchValue.includes(q))
       .slice(0, limit);
   }
+
+  // ── Render ───────────────────────────────────────
 
   _render() {
     const chevron =
@@ -206,17 +327,24 @@ class FilterManager {
       '</div>';
   }
 
+  // ── Event binding ────────────────────────────────
+
   _bindEvents() {
     const self = this;
 
+    // Target university dropdown
     const targetSel = document.getElementById('filter-target');
     if (targetSel) {
       targetSel.addEventListener('change', function(e) {
         const uni = self.universities.find((u) => u.name === e.target.value);
-        if (uni) { self._targetUniversity = uni; if (self._onTargetChange) self._onTargetChange(uni); }
+        if (uni) {
+          self._targetUniversity = uni;
+          self._emitTargetChange(uni);
+        }
       });
     }
 
+    // Search input + autocomplete
     const searchInput = document.getElementById('filter-search');
     const acDropdown  = document.getElementById('filter-dropdown');
     this._activeDropdownIndex = -1;
@@ -225,7 +353,7 @@ class FilterManager {
       searchInput.addEventListener('input', function() {
         self.state.searchQuery = searchInput.value.trim().toLowerCase();
         self._showAutocomplete(searchInput.value.trim());
-        self._emitChange();
+        self._onFilterChange();
         self._emitSearchChange();
       });
 
@@ -255,6 +383,7 @@ class FilterManager {
       });
     }
 
+    // Filter button toggles
     this.container.querySelectorAll('.ftb__btn').forEach(function(btn) {
       btn.addEventListener('click', function(e) {
         e.stopPropagation();
@@ -264,14 +393,20 @@ class FilterManager {
       });
     });
 
+    // Close panels + autocomplete when clicking outside
     document.addEventListener('click', function(e) {
-      if (!self.container.contains(e.target)) { self._closeAllPanels(); self._hideAutocomplete(); }
+      if (!self.container.contains(e.target)) {
+        self._closeAllPanels();
+        self._hideAutocomplete();
+      }
     });
 
+    // Prevent click inside a panel from bubbling to document
     this.container.querySelectorAll('.ftb__panel').forEach(function(panel) {
       panel.addEventListener('click', function(e) { e.stopPropagation(); });
     });
 
+    // Property type checkboxes
     this.container.querySelectorAll('[data-filter="type"]').forEach(function(cb) {
       cb.addEventListener('change', function() {
         cb.checked ? self.state.types.add(cb.value) : self.state.types.delete(cb.value);
@@ -279,6 +414,7 @@ class FilterManager {
       });
     });
 
+    // Amenity checkboxes
     this.container.querySelectorAll('[data-filter="amenity"]').forEach(function(cb) {
       cb.addEventListener('change', function() {
         cb.checked ? self.state.amenities.add(cb.value) : self.state.amenities.delete(cb.value);
@@ -286,24 +422,26 @@ class FilterManager {
       });
     });
 
-    ['filter-beds',      function(v) { self.state.minBeds  = parseInt(v, 10); self._onFilterChange(); }].forEach(function(_, i, a) { if (i === 0) { const el = document.getElementById(a[0]); if (el) el.addEventListener('change', function(e) { a[1](e.target.value); }); } });
-    ['filter-baths',     function(v) { self.state.minBaths = parseInt(v, 10); self._onFilterChange(); }].forEach(function(_, i, a) { if (i === 0) { const el = document.getElementById(a[0]); if (el) el.addEventListener('change', function(e) { a[1](e.target.value); }); } });
-
+    // Beds / Baths selects
     const bedsEl  = document.getElementById('filter-beds');
     const bathsEl = document.getElementById('filter-baths');
     if (bedsEl)  bedsEl.addEventListener('change',  function(e) { self.state.minBeds  = parseInt(e.target.value, 10); self._onFilterChange(); });
     if (bathsEl) bathsEl.addEventListener('change', function(e) { self.state.minBaths = parseInt(e.target.value, 10); self._onFilterChange(); });
 
+    // Price range inputs
     const pMin = document.getElementById('filter-price-min');
     const pMax = document.getElementById('filter-price-max');
-    if (pMin) pMin.addEventListener('input', function(e) { self.state.priceMin = e.target.value ? parseInt(e.target.value, 10) : 0;        self._onFilterChange(); });
-    if (pMax) pMax.addEventListener('input', function(e) { self.state.priceMax = e.target.value ? parseInt(e.target.value, 10) : Infinity;  self._onFilterChange(); });
+    if (pMin) pMin.addEventListener('input', function(e) { self.state.priceMin = e.target.value ? parseInt(e.target.value, 10) : 0;       self._onFilterChange(); });
+    if (pMax) pMax.addEventListener('input', function(e) { self.state.priceMax = e.target.value ? parseInt(e.target.value, 10) : Infinity; self._onFilterChange(); });
 
+    // Sqft range inputs
     const sMin = document.getElementById('filter-sqft-min');
     const sMax = document.getElementById('filter-sqft-max');
-    if (sMin) sMin.addEventListener('input', function(e) { self.state.sqftMin = e.target.value ? parseInt(e.target.value, 10) : 0;        self._onFilterChange(); });
-    if (sMax) sMax.addEventListener('input', function(e) { self.state.sqftMax = e.target.value ? parseInt(e.target.value, 10) : Infinity;  self._onFilterChange(); });
+    if (sMin) sMin.addEventListener('input', function(e) { self.state.sqftMin = e.target.value ? parseInt(e.target.value, 10) : 0;       self._onFilterChange(); });
+    if (sMax) sMax.addEventListener('input', function(e) { self.state.sqftMax = e.target.value ? parseInt(e.target.value, 10) : Infinity; self._onFilterChange(); });
   }
+
+  // ── Panel management ─────────────────────────────
 
   _showPanel(name) {
     this._closeAllPanels();
@@ -326,21 +464,24 @@ class FilterManager {
     this._currentPanel = null;
   }
 
+  // ── Button state & chips ─────────────────────────
+
   _updateButtonStates() {
     const setActive = (name, active) => {
       const wrap = this.container.querySelector('.ftb__btn-wrap[data-panel="' + name + '"]');
       if (wrap) wrap.querySelector('.ftb__btn').classList.toggle('ftb__btn--has-value', active);
     };
-    setActive('type',      this.state.types.size > 0);
-    setActive('beds',      this.state.minBeds > 0);
-    setActive('baths',     this.state.minBaths > 0);
-    setActive('price',     this.state.priceMin > 0 || this.state.priceMax < Infinity);
-    setActive('sqft',      this.state.sqftMin > 0 || this.state.sqftMax < Infinity);
-    setActive('amenities', this.state.amenities.size > 0);
+    const s = this.state;
+    setActive('type',      s.types.size > 0);
+    setActive('beds',      s.minBeds > 0);
+    setActive('baths',     s.minBaths > 0);
+    setActive('price',     s.priceMin > 0 || s.priceMax < Infinity);
+    setActive('sqft',      s.sqftMin > 0 || s.sqftMax < Infinity);
+    setActive('amenities', s.amenities.size > 0);
   }
 
   _updateChips() {
-    const chips = this._getActiveChips();
+    const chips     = this.state.getActiveChips();
     const container = document.getElementById('filter-chips');
     if (!chips.length) { container.innerHTML = ''; return; }
     const self = this;
@@ -365,57 +506,71 @@ class FilterManager {
     if (resetBtn) resetBtn.addEventListener('click', function() { self._resetAll(); });
   }
 
-  _getActiveChips() {
-    const chips = [];
-    for (const type of this.state.types) chips.push({ label: type, key: 'type', value: type });
-    if (this.state.minBeds > 0)  chips.push({ label: this.state.minBeds  + '+ Beds',  key: 'beds'  });
-    if (this.state.minBaths > 0) chips.push({ label: this.state.minBaths + '+ Baths', key: 'baths' });
-    if (this.state.priceMin > 0 && this.state.priceMax < Infinity) {
-      chips.push({ label: '$' + this.state.priceMin.toLocaleString() + ' – $' + this.state.priceMax.toLocaleString(), key: 'price' });
-    } else if (this.state.priceMin > 0) {
-      chips.push({ label: '$' + this.state.priceMin.toLocaleString() + '+', key: 'price' });
-    } else if (this.state.priceMax < Infinity) {
-      chips.push({ label: 'Up to $' + this.state.priceMax.toLocaleString(), key: 'price' });
-    }
-    if (this.state.sqftMin > 0 && this.state.sqftMax < Infinity) {
-      chips.push({ label: this.state.sqftMin + ' – ' + this.state.sqftMax + ' sqft', key: 'sqft' });
-    } else if (this.state.sqftMin > 0) {
-      chips.push({ label: this.state.sqftMin + '+ sqft', key: 'sqft' });
-    } else if (this.state.sqftMax < Infinity) {
-      chips.push({ label: 'Up to ' + this.state.sqftMax + ' sqft', key: 'sqft' });
-    }
-    for (const amenity of this.state.amenities) chips.push({ label: amenity, key: 'amenity', value: amenity });
-    return chips;
-  }
-
   _removeFilter(key, value) {
+    const s = this.state;
     switch (key) {
-      case 'type':    this.state.types.delete(value);    const tc = this.container.querySelector('[data-filter="type"][value="' + value + '"]'); if (tc) tc.checked = false; break;
-      case 'beds':    this.state.minBeds = 0;            const bedsEl = document.getElementById('filter-beds'); if (bedsEl) bedsEl.value = '0'; break;
-      case 'baths':   this.state.minBaths = 0;           const bathsEl = document.getElementById('filter-baths'); if (bathsEl) bathsEl.value = '0'; break;
-      case 'price':   this.state.priceMin = 0; this.state.priceMax = Infinity; const pmn = document.getElementById('filter-price-min'); const pmx = document.getElementById('filter-price-max'); if (pmn) pmn.value = ''; if (pmx) pmx.value = ''; break;
-      case 'sqft':    this.state.sqftMin = 0; this.state.sqftMax = Infinity; const smn = document.getElementById('filter-sqft-min'); const smx = document.getElementById('filter-sqft-max'); if (smn) smn.value = ''; if (smx) smx.value = ''; break;
-      case 'amenity': this.state.amenities.delete(value); const ac = this.container.querySelector('[data-filter="amenity"][value="' + value + '"]'); if (ac) ac.checked = false; break;
+      case 'type': {
+        s.types.delete(value);
+        const tc = this.container.querySelector('[data-filter="type"][value="' + value + '"]');
+        if (tc) tc.checked = false;
+        break;
+      }
+      case 'beds': {
+        s.minBeds = 0;
+        const bedsEl = document.getElementById('filter-beds');
+        if (bedsEl) bedsEl.value = '0';
+        break;
+      }
+      case 'baths': {
+        s.minBaths = 0;
+        const bathsEl = document.getElementById('filter-baths');
+        if (bathsEl) bathsEl.value = '0';
+        break;
+      }
+      case 'price': {
+        s.priceMin = 0; s.priceMax = Infinity;
+        const pmn = document.getElementById('filter-price-min');
+        const pmx = document.getElementById('filter-price-max');
+        if (pmn) pmn.value = ''; if (pmx) pmx.value = '';
+        break;
+      }
+      case 'sqft': {
+        s.sqftMin = 0; s.sqftMax = Infinity;
+        const smn = document.getElementById('filter-sqft-min');
+        const smx = document.getElementById('filter-sqft-max');
+        if (smn) smn.value = ''; if (smx) smx.value = '';
+        break;
+      }
+      case 'amenity': {
+        s.amenities.delete(value);
+        const ac = this.container.querySelector('[data-filter="amenity"][value="' + value + '"]');
+        if (ac) ac.checked = false;
+        break;
+      }
     }
     this._onFilterChange();
   }
 
   _resetAll() {
-    this.state = { searchQuery: '', types: new Set(), minBeds: 0, minBaths: 0, priceMin: 0, priceMax: Infinity, sqftMin: 0, sqftMax: Infinity, amenities: new Set() };
+    this.state.reset();
     const srch = document.getElementById('filter-search'); if (srch) srch.value = '';
-    const beds = document.getElementById('filter-beds'); if (beds) beds.value = '0';
-    const bath = document.getElementById('filter-baths'); if (bath) bath.value = '0';
-    ['filter-price-min','filter-price-max','filter-sqft-min','filter-sqft-max'].forEach(function(id) { const el = document.getElementById(id); if (el) el.value = ''; });
+    const beds = document.getElementById('filter-beds');   if (beds) beds.value = '0';
+    const bath = document.getElementById('filter-baths');  if (bath) bath.value = '0';
+    ['filter-price-min', 'filter-price-max', 'filter-sqft-min', 'filter-sqft-max'].forEach(function(id) {
+      const el = document.getElementById(id); if (el) el.value = '';
+    });
     this.container.querySelectorAll('input[type="checkbox"]').forEach(function(cb) { cb.checked = false; });
     this._onFilterChange();
     this._emitSearchChange();
   }
 
+  // ── Autocomplete ─────────────────────────────────
+
   _showAutocomplete(query) {
     if (!query || query.length < 2) { this._hideAutocomplete(); return; }
     const dropdown = document.getElementById('filter-dropdown');
-    const matches = this._matchSuggestions(query);
-    const self = this;
+    const matches  = this._matchSuggestions(query);
+    const self     = this;
     this._activeDropdownIndex = -1;
 
     dropdown.innerHTML = matches.map(function(s, i) {
@@ -433,7 +588,8 @@ class FilterManager {
       item.addEventListener('mousedown', function(e) {
         e.preventDefault();
         const uniName = item.dataset.uni;
-        if (uniName) { self._selectUniversitySuggestion(uniName); } else { self._selectSuggestion(item.dataset.value); }
+        if (uniName) { self._selectUniversitySuggestion(uniName); }
+        else         { self._selectSuggestion(item.dataset.value); }
       });
     });
 
@@ -445,9 +601,9 @@ class FilterManager {
     if (!this._placesService) this._placesService = new google.maps.places.AutocompleteService();
     this._placesRequestId += 1;
     const requestId = this._placesRequestId;
-    const self = this;
+    const self      = this;
     this._placesService.getPlacePredictions({ input: query }, function(predictions, status) {
-      if (requestId !== self._placesRequestId) return;
+      if (requestId !== self._placesRequestId) return;  // stale response
       if (dropdown.style.display === 'none') return;
       if (status !== google.maps.places.PlacesServiceStatus.OK || !predictions) {
         if (dropdown.children.length === 0) dropdown.style.display = 'none';
@@ -455,15 +611,18 @@ class FilterManager {
       }
       if (dropdown.children.length > 0) {
         const sep = document.createElement('div');
-        sep.className = 'ftb__ac-sep'; sep.textContent = 'More places';
+        sep.className  = 'ftb__ac-sep';
+        sep.textContent = 'More places';
         dropdown.appendChild(sep);
       }
       predictions.slice(0, 4).forEach(function(p) {
         const item = document.createElement('div');
-        item.className = 'ftb__ac-item ftb__ac-item--place';
+        item.className    = 'ftb__ac-item ftb__ac-item--place';
         item.dataset.placeId = p.place_id;
         item.innerHTML =
-          '<svg class="ftb__ac-icon" viewBox="0 0 24 24" width="16" height="16"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5a2.5 2.5 0 010-5 2.5 2.5 0 010 5z" fill="currentColor"/></svg>' +
+          '<svg class="ftb__ac-icon" viewBox="0 0 24 24" width="16" height="16">' +
+            '<path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5a2.5 2.5 0 010-5 2.5 2.5 0 010 5z" fill="currentColor"/>' +
+          '</svg>' +
           '<div class="ftb__ac-text">' +
             '<span class="ftb__ac-name">' + self._highlightMatch(p.structured_formatting.main_text, query) + '</span>' +
             '<span class="ftb__ac-type">' + (p.structured_formatting.secondary_text || 'Google Maps') + '</span>' +
@@ -482,7 +641,11 @@ class FilterManager {
     if (searchInput) searchInput.value = description;
     this.state.searchQuery = description.toLowerCase();
     this._hideAutocomplete();
-    if (this._onPlaceSelect) this._onPlaceSelect(placeId, description);
+    if (this._bus) {
+      this._bus.publish('filter:placeSelected', { placeId });
+    } else if (this._onPlaceSelect) {
+      this._onPlaceSelect(placeId, description);
+    }
   }
 
   _hideAutocomplete() {
@@ -500,7 +663,11 @@ class FilterManager {
     if (!query) return text;
     const idx = text.toLowerCase().indexOf(query.toLowerCase());
     if (idx === -1) return text;
-    return text.slice(0, idx) + '<strong>' + text.slice(idx, idx + query.length) + '</strong>' + text.slice(idx + query.length);
+    return (
+      text.slice(0, idx) +
+      '<strong>' + text.slice(idx, idx + query.length) + '</strong>' +
+      text.slice(idx + query.length)
+    );
   }
 
   _selectSuggestion(value) {
@@ -508,7 +675,7 @@ class FilterManager {
     if (searchInput) searchInput.value = value;
     this.state.searchQuery = value.toLowerCase();
     this._hideAutocomplete();
-    this._emitChange();
+    this._onFilterChange();
     this._emitSearchChange();
   }
 
@@ -522,73 +689,89 @@ class FilterManager {
     if (searchInput) searchInput.value = '';
     this.state.searchQuery = '';
     this._hideAutocomplete();
-    this._emitChange();
-    if (this._onTargetChange) this._onTargetChange(uni);
+    this._onFilterChange();
+    this._emitTargetChange(uni);
   }
 
-  _matchesSearch(listing, query) {
-    const city = this._parseCity(listing.address).toLowerCase();
-    const zip  = this._parseZip(listing.address);
-    const addr = listing.address.toLowerCase();
-    return city.includes(query) || zip.includes(query) || addr.includes(query);
-  }
-
-  applyFilters(listings) {
-    const s = this.state;
-    return listings.filter((l) => {
-      if (s.searchQuery && !this._matchesSearch(l, s.searchQuery)) return false;
-      if (s.types.size > 0 && !s.types.has(l.type)) return false;
-      if (l.bedrooms < s.minBeds) return false;
-      if (l.bathrooms < s.minBaths) return false;
-      if (l.price < s.priceMin) return false;
-      if (l.price > s.priceMax) return false;
-      if ((l.sqft || 0) < s.sqftMin) return false;
-      if (s.sqftMax < Infinity && (l.sqft || Infinity) > s.sqftMax) return false;
-      if (s.amenities.size > 0) {
-        for (const amenity of s.amenities) { if (!(l.amenities || []).includes(amenity)) return false; }
-      }
-      return true;
-    });
-  }
-
-  getPassingIds() {
-    const passing = this.applyFilters(this.listings);
-    return new Set(passing.map((l) => l.id));
-  }
-
-  getSearchMatches() {
-    if (!this.state.searchQuery) return [];
-    const query = this.state.searchQuery;
-    return this.listings.filter((l) => this._matchesSearch(l, query));
-  }
+  // ── Internal event emitters ──────────────────────
 
   _onFilterChange() {
     this._updateChips();
     this._updateButtonStates();
-    this._emitChange();
+    if (this._bus) {
+      this._bus.publish('filter:changed');
+    } else if (this._onChange) {
+      this._onChange();
+    }
   }
 
-  _emitChange() { if (this._onChange) this._onChange(); }
+  _emitTargetChange(uni) {
+    if (this._bus) {
+      this._bus.publish('filter:targetChanged', { university: uni });
+    } else if (this._onTargetChange) {
+      this._onTargetChange(uni);
+    }
+  }
 
   _emitSearchChange() {
     const self = this;
     clearTimeout(this._searchDebounceTimer);
     this._searchDebounceTimer = setTimeout(function() {
-      if (self._onSearchChange) self._onSearchChange(self.getSearchMatches());
+      const matches = self.getSearchMatches();
+      if (self._bus) {
+        self._bus.publish('filter:searchChanged', { matches });
+      } else if (self._onSearchChange) {
+        self._onSearchChange(matches);
+      }
     }, 400);
   }
 
+  // ── Public API ───────────────────────────────────
+
+  /**
+   * Apply current filters to a listings array.
+   * Delegates to FilterState.applyTo() so callers don't need to
+   * reach into the state object directly.
+   * @param {object[]} listings
+   * @returns {object[]}
+   */
+  applyFilters(listings) {
+    return this.state.applyTo(listings);
+  }
+
+  /**
+   * Return the Set of listing IDs that pass all active filters
+   * against the full listings array.
+   * @returns {Set<number>}
+   */
+  getPassingIds() {
+    return new Set(this.state.applyTo(this.listings).map((l) => l.id));
+  }
+
+  /**
+   * Return listings that match the current text search query.
+   * @returns {object[]}
+   */
+  getSearchMatches() {
+    if (!this.state.searchQuery) return [];
+    return this.listings.filter((l) => this.state.matchesSearch(l));
+  }
+
+  /** Programmatically set the target university. */
   setTargetUniversity(uni) {
     this._targetUniversity = uni;
     const sel = document.getElementById('filter-target');
     if (sel) sel.value = uni.name;
   }
 
+  getTargetUniversity() { return this._targetUniversity; }
+
+  // Backward-compat callback setters (used when no EventBus is provided)
   onChange(cb)       { this._onChange       = cb; }
   onSearchChange(cb) { this._onSearchChange = cb; }
   onTargetChange(cb) { this._onTargetChange = cb; }
   onPlaceSelect(cb)  { this._onPlaceSelect  = cb; }
-  getTargetUniversity() { return this._targetUniversity; }
 }
 
+window.FilterState   = FilterState;
 window.FilterManager = FilterManager;
