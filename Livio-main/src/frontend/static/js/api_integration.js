@@ -154,18 +154,17 @@ function createApartmentCard(apartment) {
 
 async function toggleFavorite(apartmentId) {
     if (!isUserLoggedIn()) {
-        showNotification('Please log in to save favorites', 'warning');
-        // Redirect to login
-        window.location.href = '/accounts/login/?next=/apartments/';
+        window.location.href = '/login/?next=' + encodeURIComponent(window.location.pathname);
         return;
     }
-    
+
     try {
         const response = await fetch('/apartments/api/favorites/toggle/', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'X-CSRFToken': getCookie('csrftoken')
+                'X-CSRFToken': getCookie('csrftoken'),
+                'Authorization': 'Bearer ' + localStorage.getItem('access_token'),
             },
             body: JSON.stringify({ apartment_id: apartmentId })
         });
@@ -251,7 +250,7 @@ function updateFavoriteButton(apartmentId, isFavorited) {
 async function createApartmentAPI(apartmentData) {
     if (!isUserLoggedIn()) {
         showNotification('Please log in to create listings', 'warning');
-        window.location.href = '/accounts/login/?next=/apartments/';
+        window.location.href = '/login/?next=' + encodeURIComponent(window.location.pathname);
         return;
     }
     
@@ -292,8 +291,7 @@ async function createApartmentAPI(apartmentData) {
    =========================================================== */
 
 function isUserLoggedIn() {
-    // Check if user is authenticated (Django sets this)
-    return document.body.dataset.userAuthenticated === 'true';
+    return !!localStorage.getItem('access_token');
 }
 
 function getCookie(name) {

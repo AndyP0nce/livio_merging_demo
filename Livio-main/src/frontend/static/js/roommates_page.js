@@ -5,8 +5,8 @@ document.addEventListener('DOMContentLoaded', async (event) =>{
     // if there is nothing logged in from the user
     if (localStorage.getItem('access_token') === null)
     {
-        // prompt user to sign in or sign up
-
+        window.location.href = '/login/?next=' + encodeURIComponent(window.location.pathname);
+        return;
     }
     else
     {
