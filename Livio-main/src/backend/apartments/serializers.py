@@ -33,10 +33,10 @@ class UniversitySerializer(serializers.ModelSerializer):
 
 class UserSerializer(serializers.ModelSerializer):
     """Simple user serializer for apartment owner info."""
-    
+
     class Meta:
         model = User
-        fields = ['id', 'username', 'first_name', 'last_name']
+        fields = ['id', 'username']
 
 
 class ApartmentPostSerializer(serializers.ModelSerializer):
