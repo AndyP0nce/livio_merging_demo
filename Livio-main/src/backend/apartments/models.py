@@ -93,6 +93,11 @@ class ApartmentPost(models.Model):
         max_length=500,
         default='https://images.unsplash.com/photo-1522708323590-d24dbb6b0267'
     )
+    images = models.JSONField(
+        default=list,
+        blank=True,
+        help_text="List of S3 image URLs (up to 10)"
+    )
     
     # Owner Info
     owner = models.ForeignKey(

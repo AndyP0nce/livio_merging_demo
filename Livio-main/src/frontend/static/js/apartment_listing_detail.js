@@ -61,15 +61,19 @@ class ListingModal {
       { color: base, label: 'Bathroom',    gradient: 'linear-gradient(0deg, rgba(255,255,255,0.08) 0%, rgba(0,0,0,0.12) 100%)', imageUrl: null },
     ];
 
-    if (listing.image_url) {
-      // Real photo goes first; colour slides follow as additional placeholders
-      return [
-        { color: null, label: 'Main Photo', gradient: 'none', imageUrl: listing.image_url },
-        ...colorSlides,
-      ];
+    // Build real-photo slides from listing.images array (normalized from server)
+    const realPhotos = Array.isArray(listing.images) && listing.images.length > 0
+      ? listing.images
+      : (listing.image_url ? [listing.image_url] : []);
+
+    if (realPhotos.length > 0) {
+      const photoSlides = realPhotos.map(function(url, i) {
+        return { color: null, label: i === 0 ? 'Main Photo' : 'Photo ' + (i + 1), gradient: 'none', imageUrl: url };
+      });
+      return [...photoSlides, ...colorSlides];
     }
 
-    // No real photo – show all colour-based slides
+    // No real photos – show colour-based slides only
     return [
       { color: base, label: 'Main Photo', gradient: 'none', imageUrl: null },
       ...colorSlides,

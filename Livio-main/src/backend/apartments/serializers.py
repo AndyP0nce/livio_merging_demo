@@ -72,6 +72,7 @@ class ApartmentPostSerializer(serializers.ModelSerializer):
             'amenities',
             'amenities_list',
             'image_url',
+            'images',
             'owner',
             'owner_info',
             'is_active',
@@ -131,9 +132,10 @@ class ApartmentPostCreateSerializer(serializers.ModelSerializer):
             'room_type',
             'amenities',
             'image_url',
+            'images',
             'available_from',
         ]
-    
+
     def create(self, validated_data):
         """
         Create apartment with current user as owner.

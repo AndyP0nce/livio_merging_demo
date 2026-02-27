@@ -16,9 +16,7 @@
  *      sqft         → square_feet
  *  - Response normalized back to demo-map shape by apartment_script.js
  *
- * The three mapping helpers (_mapRoomType, _mapBedrooms, _mapBathrooms)
- * are now static class methods rather than module-level functions, keeping
- * implementation details inside the class.
+ * Supports up to 10 listing photos uploaded individually to S3.
  */
 
 var AMENITY_OPTIONS = [
@@ -27,16 +25,19 @@ var AMENITY_OPTIONS = [
   'Bike Storage', 'Backyard', 'Doorman',
 ];
 
+var MAX_PHOTOS = 10;
+
 class CreateListingModal {
   constructor(containerId) {
-    this.container        = document.getElementById(containerId);
-    this._onSuccess       = null;
-    this._onEditSuccess   = null;
-    this._submitting      = false;
-    this._autocomplete    = null;
-    this._selectedPlace   = null;
-    this._uploadedImageUrl = null; // S3 URL set after a successful image upload
-    this._editingId       = null;  // non-null when editing an existing listing
+    this.container       = document.getElementById(containerId);
+    this._onSuccess      = null;
+    this._onEditSuccess  = null;
+    this._submitting     = false;
+    this._autocomplete   = null;
+    this._selectedPlace  = null;
+    this._photoItems     = [];  // [{ id, file|null, objectUrl|null, s3Url|null }]
+    this._photoIdCounter = 0;
+    this._editingId      = null; // non-null when editing an existing listing
 
     this._render();
     this._bindEvents();
@@ -72,11 +73,9 @@ class CreateListingModal {
     document.body.style.overflow = 'hidden';
     this._resetForm();
 
-    // Update header/button labels
     document.querySelector('.create-modal__title').textContent = 'Edit Your Listing';
     document.getElementById('create-submit').textContent = 'Save Changes';
 
-    // Pre-fill form fields
     const form = document.getElementById('create-listing-form');
     form.title.value       = listing.title || '';
     form.description.value = listing.description || '';
@@ -85,11 +84,11 @@ class CreateListingModal {
 
     // Address — split address string back into parts (best-effort)
     const addrParts = (listing.address || '').split(',').map(function(s) { return s.trim(); });
-    form.address.value  = addrParts[0] || '';
-    if (addrParts[1]) { const cityEl = document.getElementById('cl-city');   if (cityEl)  cityEl.value  = addrParts[1]; }
+    form.address.value = addrParts[0] || '';
+    if (addrParts[1]) { const cityEl  = document.getElementById('cl-city');  if (cityEl)  cityEl.value  = addrParts[1]; }
     if (addrParts[2]) { const stateEl = document.getElementById('cl-state'); if (stateEl) stateEl.value = addrParts[2]; }
 
-    // Type reverse-map (display label → form option value)
+    // Type reverse-map
     const typeReverseMap = {
       'Private Room': 'Private Room',
       'Shared Room':  'Shared Room',
@@ -100,7 +99,7 @@ class CreateListingModal {
     const typeEl = document.getElementById('cl-type');
     if (typeEl) typeEl.value = typeReverseMap[listing.type] || 'Apartment';
 
-    // Bedrooms reverse-map ('1bed' → '1', etc.)
+    // Bedrooms reverse-map
     const bedsEl = document.getElementById('cl-beds');
     if (bedsEl) {
       if (listing.bedrooms === 0) bedsEl.value = 'Studio';
@@ -112,24 +111,23 @@ class CreateListingModal {
     const bathsEl = document.getElementById('cl-baths');
     if (bathsEl) bathsEl.value = String(listing.bathrooms || 1);
 
-    // Amenities — check matching checkboxes
+    // Amenities
     const checkedAmenities = new Set((listing.amenities || []).map(function(a) { return a.toLowerCase(); }));
     form.querySelectorAll('input[name="amenities"]').forEach(function(cb) {
       cb.checked = checkedAmenities.has(cb.value.toLowerCase());
     });
 
-    // Show existing image if present
-    if (listing.image_url) {
-      this._uploadedImageUrl = listing.image_url;
-      const previewImg    = document.getElementById('cl-preview-img');
-      const previewBox    = document.getElementById('cl-image-preview');
-      const uploadLabel   = document.getElementById('cl-upload-label');
-      const statusEl      = document.getElementById('cl-upload-status');
-      if (previewImg)  previewImg.src = listing.image_url;
-      if (previewBox)  previewBox.style.display = 'flex';
-      if (uploadLabel) uploadLabel.style.display = 'none';
-      if (statusEl)    statusEl.textContent = 'Current photo';
-    }
+    // Load existing photos from listing.images, falling back to image_url
+    const imgs = Array.isArray(listing.images) && listing.images.length > 0
+      ? listing.images
+      : (listing.image_url ? [listing.image_url] : []);
+
+    imgs.forEach((url) => {
+      if (this._photoItems.length < MAX_PHOTOS) {
+        this._photoItems.push({ id: ++this._photoIdCounter, file: null, objectUrl: url, s3Url: url });
+      }
+    });
+    this._renderPhotoThumbs();
   }
 
   close() {
@@ -147,9 +145,7 @@ class CreateListingModal {
   onEditSuccess(cb) { this._onEditSuccess = cb; }
 
   // ── Static field mappers ─────────────────────────
-  //   Previously module-level functions; now co-located with the class.
 
-  /** Map form "type" dropdown value → Livio room_type API value. */
   static _mapRoomType(type) {
     const map = {
       'Apartment':    'entire',
@@ -162,15 +158,13 @@ class CreateListingModal {
     return map[type] || 'private';
   }
 
-  /** Map form "bedrooms" value → Livio bedrooms API value. */
   static _mapBedrooms(beds) {
-    if (beds === 'Studio' || beds === '0') return '1bed'; // closest Livio option
+    if (beds === 'Studio' || beds === '0') return '1bed';
     const n = parseInt(beds, 10) || 1;
     if (n >= 4) return '4bed';
     return n + 'bed';
   }
 
-  /** Map form "bathrooms" value → Livio bathrooms API value. */
   static _mapBathrooms(baths) {
     const n = parseFloat(baths) || 1;
     if (n >= 3) return '3bath';
@@ -289,23 +283,22 @@ class CreateListingModal {
             '</div>' +
 
             '<div class="create-modal__section">' +
-              '<label class="create-modal__label" for="cl-image">Listing Photo (optional)</label>' +
-              '<div class="create-modal__upload" id="cl-upload-area">' +
-                '<input type="file" id="cl-image" name="image" accept="image/jpeg,image/png,image/webp" class="create-modal__file-input" />' +
-                '<label for="cl-image" class="create-modal__upload-label" id="cl-upload-label">' +
-                  '<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin-bottom:6px">' +
+              '<label class="create-modal__label">' +
+                'Listing Photos ' +
+                '<span class="create-modal__label-hint" id="cl-photo-count">(0 / ' + MAX_PHOTOS + ')</span>' +
+              '</label>' +
+              '<div class="create-modal__photo-grid" id="cl-photo-grid">' +
+                '<label class="create-modal__photo-add" id="cl-photo-add-label" for="cl-images" title="Add up to ' + MAX_PHOTOS + ' photos">' +
+                  '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.5">' +
                     '<path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>' +
                     '<polyline points="17 8 12 3 7 8"/>' +
                     '<line x1="12" y1="3" x2="12" y2="15"/>' +
                   '</svg>' +
-                  '<span id="cl-upload-text">Click to choose a photo</span>' +
+                  '<span>Add Photos</span>' +
                 '</label>' +
-                '<div id="cl-image-preview" class="create-modal__img-preview" style="display:none;">' +
-                  '<img id="cl-preview-img" src="" alt="Preview" class="create-modal__preview-img" />' +
-                  '<button type="button" id="cl-remove-image" class="create-modal__remove-img" aria-label="Remove photo">&times;</button>' +
-                  '<span id="cl-upload-status" class="create-modal__upload-status"></span>' +
-                '</div>' +
+                '<input type="file" id="cl-images" accept="image/jpeg,image/png,image/webp" multiple class="create-modal__file-input--hidden" />' +
               '</div>' +
+              '<p id="cl-upload-status" class="create-modal__upload-status"></p>' +
             '</div>' +
 
             '<div id="create-error" class="create-modal__error" style="display:none;"></div>' +
@@ -335,87 +328,139 @@ class CreateListingModal {
       self._handleSubmit(e);
     });
 
-    // Image file input
-    document.getElementById('cl-image').addEventListener('change', function(e) {
-      self._handleImageSelect(e.target.files[0]);
-    });
-    document.getElementById('cl-remove-image').addEventListener('click', function() {
-      self._clearImageUpload();
+    // Multi-image file input
+    document.getElementById('cl-images').addEventListener('change', function(e) {
+      self._handleImageSelect(e.target.files);
+      e.target.value = ''; // reset so same file can be re-selected
     });
   }
 
-  // ── Image upload ─────────────────────────────────
+  // ── Photo management ─────────────────────────────
 
-  _handleImageSelect(file) {
-    if (!file) return;
+  _handleImageSelect(files) {
+    const remaining = MAX_PHOTOS - this._photoItems.length;
+    if (remaining <= 0) return;
 
-    // Show preview
-    const reader = new FileReader();
+    Array.from(files).slice(0, remaining).forEach((file) => {
+      const objectUrl = URL.createObjectURL(file);
+      this._photoItems.push({ id: ++this._photoIdCounter, file, objectUrl, s3Url: null });
+    });
+    this._renderPhotoThumbs();
+  }
+
+  _removePhoto(photoId) {
+    const idx = this._photoItems.findIndex((item) => item.id === photoId);
+    if (idx === -1) return;
+    const item = this._photoItems[idx];
+    // Only revoke object URLs for locally-selected files (not existing S3 URLs used as objectUrl)
+    if (item.file && item.objectUrl) URL.revokeObjectURL(item.objectUrl);
+    this._photoItems.splice(idx, 1);
+    this._renderPhotoThumbs();
+  }
+
+  _clearAllPhotos() {
+    this._photoItems.forEach((item) => {
+      if (item.file && item.objectUrl) URL.revokeObjectURL(item.objectUrl);
+    });
+    this._photoItems = [];
+    this._renderPhotoThumbs();
+  }
+
+  _renderPhotoThumbs() {
+    const grid     = document.getElementById('cl-photo-grid');
+    const countEl  = document.getElementById('cl-photo-count');
+    const addLabel = document.getElementById('cl-photo-add-label');
+    if (!grid) return;
+
+    // Remove existing thumb elements (preserve add-label and file input)
+    Array.from(grid.querySelectorAll('.create-modal__photo-thumb')).forEach((el) => el.remove());
+
+    // Insert thumbnails before the add-label
     const self = this;
-    reader.onload = function(e) {
-      document.getElementById('cl-preview-img').src = e.target.result;
-      document.getElementById('cl-image-preview').style.display = 'flex';
-      document.getElementById('cl-upload-label').style.display = 'none';
-      document.getElementById('cl-upload-status').textContent = 'Ready to upload';
-      document.getElementById('cl-upload-status').className = 'create-modal__upload-status';
-      self._uploadedImageUrl = null; // reset until upload completes
-    };
-    reader.readAsDataURL(file);
+    this._photoItems.forEach((item) => {
+      const thumb = document.createElement('div');
+      thumb.className = 'create-modal__photo-thumb';
+      thumb.dataset.photoId = item.id;
+
+      const img = document.createElement('img');
+      img.src = item.objectUrl || item.s3Url || '';
+      img.alt = 'Photo';
+
+      const removeBtn = document.createElement('button');
+      removeBtn.type = 'button';
+      removeBtn.className = 'create-modal__photo-remove';
+      removeBtn.setAttribute('aria-label', 'Remove photo');
+      removeBtn.textContent = '\u00d7';
+      removeBtn.addEventListener('click', function() { self._removePhoto(item.id); });
+
+      thumb.appendChild(img);
+      thumb.appendChild(removeBtn);
+      grid.insertBefore(thumb, addLabel);
+    });
+
+    const count = this._photoItems.length;
+    if (countEl)  countEl.textContent = '(' + count + ' / ' + MAX_PHOTOS + ')';
+    if (addLabel) addLabel.style.display = count >= MAX_PHOTOS ? 'none' : '';
   }
 
-  _clearImageUpload() {
-    document.getElementById('cl-image').value = '';
-    document.getElementById('cl-preview-img').src = '';
-    document.getElementById('cl-image-preview').style.display = 'none';
-    document.getElementById('cl-upload-label').style.display = 'flex';
-    document.getElementById('cl-upload-status').textContent = '';
-    this._uploadedImageUrl = null;
-  }
+  // ── S3 upload ────────────────────────────────────
 
   async _uploadImageToS3(file) {
+    const token = localStorage.getItem('access_token');
+    const res = await fetch('/apartments/api/upload-url/', {
+      method: 'POST',
+      headers: {
+        'Content-Type':  'application/json',
+        'X-CSRFToken':   LivioUtils.getCsrfToken(),
+        'Authorization': 'Bearer ' + token,
+      },
+      credentials: 'include',
+      body: JSON.stringify({ fileName: file.name, fileType: file.type, expiration: 300 }),
+    });
+
+    if (!res.ok) throw new Error('Could not get upload URL (HTTP ' + res.status + ')');
+
+    const { presignedURL, imageURL } = await res.json();
+
+    const s3Res = await fetch(presignedURL, {
+      method:  'PUT',
+      headers: { 'Content-Type': file.type },
+      body:    file,
+    });
+
+    if (!s3Res.ok) throw new Error('S3 upload failed (HTTP ' + s3Res.status + ')');
+
+    return imageURL;
+  }
+
+  async _uploadAllPendingPhotos() {
     const statusEl = document.getElementById('cl-upload-status');
-    statusEl.textContent = 'Uploading…';
-    statusEl.className = 'create-modal__upload-status create-modal__upload-status--uploading';
+    const pending  = this._photoItems.filter((item) => item.file && !item.s3Url);
+    if (pending.length === 0) return;
 
-    try {
-      const token = localStorage.getItem('access_token');
-      const res = await fetch('/apartments/api/upload-url/', {
-        method: 'POST',
-        headers: {
-          'Content-Type':  'application/json',
-          'X-CSRFToken':   LivioUtils.getCsrfToken(),
-          'Authorization': 'Bearer ' + token,
-        },
-        credentials: 'include',
-        body: JSON.stringify({
-          fileName:   file.name,
-          fileType:   file.type,
-          expiration: 300,
-        }),
-      });
+    if (statusEl) {
+      statusEl.textContent = 'Uploading ' + pending.length + ' photo(s)\u2026';
+      statusEl.className = 'create-modal__upload-status create-modal__upload-status--uploading';
+    }
 
-      if (!res.ok) throw new Error('Could not get upload URL (HTTP ' + res.status + ')');
+    let successCount = 0;
+    for (const item of pending) {
+      try {
+        item.s3Url = await this._uploadImageToS3(item.file);
+        successCount++;
+      } catch (err) {
+        console.warn('[CreateListing] Photo upload failed:', err.message);
+      }
+    }
 
-      const { presignedURL, imageURL } = await res.json();
-
-      // Upload directly to S3 (no Django in the loop)
-      const s3Res = await fetch(presignedURL, {
-        method:  'PUT',
-        headers: { 'Content-Type': file.type },
-        body:    file,
-      });
-
-      if (!s3Res.ok) throw new Error('S3 upload failed (HTTP ' + s3Res.status + ')');
-
-      this._uploadedImageUrl = imageURL;
-      statusEl.textContent = 'Photo uploaded ✓';
-      statusEl.className = 'create-modal__upload-status create-modal__upload-status--done';
-      return imageURL;
-
-    } catch (err) {
-      statusEl.textContent = 'Upload failed: ' + err.message;
-      statusEl.className = 'create-modal__upload-status create-modal__upload-status--error';
-      throw err;
+    if (statusEl) {
+      if (successCount === pending.length) {
+        statusEl.textContent = successCount + ' photo(s) uploaded \u2713';
+        statusEl.className = 'create-modal__upload-status create-modal__upload-status--done';
+      } else {
+        statusEl.textContent = successCount + '/' + pending.length + ' uploaded. Some photos failed.';
+        statusEl.className = 'create-modal__upload-status create-modal__upload-status--error';
+      }
     }
   }
 
@@ -467,8 +512,9 @@ class CreateListingModal {
     if (form) form.reset();
     const stateEl = document.getElementById('cl-state'); if (stateEl) stateEl.value = 'CA';
     this._selectedPlace = null;
-    this._uploadedImageUrl = null;
-    this._clearImageUpload();
+    this._clearAllPhotos();
+    const statusEl = document.getElementById('cl-upload-status');
+    if (statusEl) { statusEl.textContent = ''; statusEl.className = 'create-modal__upload-status'; }
     this._setError('');
     this._setSubmitting(false);
   }
@@ -525,16 +571,11 @@ class CreateListingModal {
     this._setError('');
     this._setSubmitting(true);
 
-    // Upload image to S3 first (if user selected a file and it hasn't been uploaded yet)
-    const imageFile = document.getElementById('cl-image').files[0];
-    if (imageFile && !this._uploadedImageUrl) {
-      try {
-        await this._uploadImageToS3(imageFile);
-      } catch (uploadErr) {
-        // Non-fatal: warn but continue without image
-        console.warn('[CreateListing] Image upload failed:', uploadErr.message, '— posting without photo.');
-      }
-    }
+    // Upload any photos that haven't been uploaded to S3 yet
+    await this._uploadAllPendingPhotos();
+
+    // Collect all successfully-uploaded S3 URLs
+    const imageUrls = this._photoItems.map((item) => item.s3Url).filter(Boolean);
 
     let lat = null, lng = null;
     if (this._selectedPlace) {
@@ -550,7 +591,6 @@ class CreateListingModal {
       }
     }
 
-    // Map form values → Livio DRF serializer field names
     const body = {
       title:        title,
       location:     address,
@@ -564,11 +604,12 @@ class CreateListingModal {
       bathrooms:    CreateListingModal._mapBathrooms(bathrooms),
       amenities:    amenities.join(','),
       is_active:    true,
+      images:       imageUrls,
     };
-    if (lat !== null)  body.latitude    = lat;
-    if (lng !== null)  body.longitude   = lng;
-    if (sqft !== null) body.square_feet = sqft;
-    if (this._uploadedImageUrl) body.image_url = this._uploadedImageUrl;
+    if (lat !== null)          body.latitude    = lat;
+    if (lng !== null)          body.longitude   = lng;
+    if (sqft !== null)         body.square_feet = sqft;
+    if (imageUrls.length > 0) body.image_url   = imageUrls[0]; // backward compat
 
     const isEdit = this._editingId !== null;
     const url    = isEdit

@@ -148,6 +148,9 @@ function normalizeApartment(raw) {
     available:   raw.is_active !== false,
     imageColor:  CARD_COLORS[raw.id % CARD_COLORS.length],
     image_url:   raw.image_url || null,
+    images:      Array.isArray(raw.images) && raw.images.length > 0
+                   ? raw.images
+                   : (raw.image_url ? [raw.image_url] : []),
     is_owner:    raw.is_owner === true,
   };
 }
