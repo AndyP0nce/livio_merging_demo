@@ -1,294 +1,89 @@
 {% extends "base_home.html" %}
 {% load static %}
+
+{% block page_identifier %}apartments{% endblock %}
+
+{% block styles %}
+<link rel="stylesheet" href="{% static 'css/apartment_styles.css' %}">
+<link rel="stylesheet" href="{% static 'css/apartment_map.css' %}">
+<link rel="stylesheet" href="{% static 'css/apartment_cards.css' %}">
+<link rel="stylesheet" href="{% static 'css/apartment_filters.css' %}">
+<link rel="stylesheet" href="{% static 'css/apartment_detail_modal.css' %}">
+<link rel="stylesheet" href="{% static 'css/apartment_create_modal.css' %}">
+{% endblock %}
+
 {% block content %}
 
-<link rel="stylesheet" href="{% static 'css/apartment_styles.css' %}" />
-
+<!-- Blurred background image (same as home screen) -->
 <div class="background">
-  <img src="{% static 'images/Bg_apartment.png' %}" alt="" aria-hidden="true" />
+  <img src="{% static 'images/bg2.jpg' %}" alt="" aria-hidden="true" />
 </div>
 
-<div class="page-container">
-    
-    <section class="filter-bar" id="filterBar">
-        <div class="filter-group-left">
-            <div class="filter-label"><i class="fa-solid fa-sliders"></i> Filters:</div>
-            
-            <div class="dropdown" id="priceDropdown">
-                <button class="dropdown-btn" onclick="toggleDropdown('priceDropdown')">
-                    Price Range <i class="fa-solid fa-chevron-down"></i>
-                </button>
-                <div class="dropdown-content">
-                    <label><input type="checkbox" name="price" value="under800"> Under $800</label>
-                    <label><input type="checkbox" name="price" value="800to1200"> $800 - $1,200</label>
-                    <label><input type="checkbox" name="price" value="1200to1600"> $1,200 - $1,600</label>
-                    <label><input type="checkbox" name="price" value="1600to2000"> $1,600 - $2,000</label>
-                    <label><input type="checkbox" name="price" value="over2000"> Over $2,000</label>
-                </div>
-            </div>
+<!-- ── Zillow-style two-column layout ───────────────── -->
+<main class="apt-app-layout">
 
-            <div class="dropdown" id="roomDropdown">
-                <button class="dropdown-btn" onclick="toggleDropdown('roomDropdown')">
-                    Room Type <i class="fa-solid fa-chevron-down"></i>
-                </button>
-                <div class="dropdown-content">
-                    <label><input type="checkbox" name="roomType" value="private"> Private Room</label>
-                    <label><input type="checkbox" name="roomType" value="shared"> Shared Room</label>
-                    <label><input type="checkbox" name="roomType" value="entire"> Entire Place</label>
-                </div>
-            </div>
-
-            <div class="dropdown" id="amenitiesDropdown">
-                <button class="dropdown-btn" onclick="toggleDropdown('amenitiesDropdown')">
-                    Amenities <i class="fa-solid fa-chevron-down"></i>
-                </button>
-                <div class="dropdown-content">
-                    <label><input type="checkbox" name="amenities" value="parking"> Parking</label>
-                    <label><input type="checkbox" name="amenities" value="gym"> Gym</label>
-                    <label><input type="checkbox" name="amenities" value="pool"> Pool</label>
-                    <label><input type="checkbox" name="amenities" value="laundry"> Laundry</label>
-                    <label><input type="checkbox" name="amenities" value="ac"> Air Conditioning</label>
-                </div>
-            </div>
-            
-            <div class="dropdown" id="bedBathDropdown">
-                <button class="dropdown-btn" onclick="toggleDropdown('bedBathDropdown')">
-                    Bed/Bath <i class="fa-solid fa-chevron-down"></i>
-                </button>
-                <div class="dropdown-content">
-                    <label><input type="checkbox" name="bedrooms" value="1bed"> 1 Bedroom</label>
-                    <label><input type="checkbox" name="bedrooms" value="2bed"> 2 Bedrooms</label>
-                    <label><input type="checkbox" name="bedrooms" value="3bed"> 3+ Bedrooms</label>
-                    <hr style="border: 0; border-top: 1px solid #444; margin: 5px 0;">
-                    <label><input type="checkbox" name="bathrooms" value="1bath"> 1 Bathroom</label>
-                    <label><input type="checkbox" name="bathrooms" value="2bath"> 2+ Bathrooms</label>
-                </div>
-            </div>
-        </div>
-
-        <button class="clear-filters-btn" onclick="clearAllFilters()">
-            <i class="fa-solid fa-rotate-left"></i> Clear Filters
-        </button>
-
-        <button class="add-posting-btn" onclick="addPosting()">
-            <i class="fa-solid fa-add"></i> Add Posting
-        </button>
-    </section>
-
-    <div class="content-grid">
-        
-        <main class="listings-column" id="listingsContainer">
-            
-            <div class="card-wrapper listing-item" 
-                 data-price="1200" 
-                 data-roomtype="shared" 
-                 data-bedrooms="2bed" 
-                 data-bathrooms="1bath" 
-                 data-amenities="parking laundry ac">
-                <div class="card" tabindex="0">
-                    <div class="card-front">
-                        <div class="image-gallery"> 
-                            <img src="{% static 'images/apartment_pics/aprt1.jpg' %}" alt="Apartment" class="apartment-image active" />
-                            <img src="{% static 'images/apartment_pics/room2.avif' %}" alt="Apartment" class="apartment-image" />
-                            <img src="{% static 'images/apartment_pics/kitchen.avif' %}" alt="Apartment" class="apartment-image" />
-                            <div class="image-dots">
-                                <span class="dot active"></span><span class="dot"></span><span class="dot"></span>
-                            </div>
-                        </div>
-                        <div class="details">
-                            <div class="user-info">
-                                <img src="{% static 'images/apartment_pics/pfp5.jpg' %}" class="user-pic" alt="User" />
-                                <span class="username">John Doe</span>
-                            </div>
-                            <div class="apartment-details">
-                                <p><strong>Location:</strong> Downtown LA</p>
-                                <p><strong>Apartment:</strong> 2 Bed, 1 Bath | Shared</p>
-                                <p><strong>Rent:</strong> <span class="price">$1,200</span></p>
-                                <p><strong>Amenities:</strong> Parking, Laundry, AC</p>
-                            </div>
-                            <button class="choose-button">View Details</button>
-                        </div>
-                    </div>
-                    <div class="card-back">
-                        <h2>About this listing</h2>
-                        <p>A spacious shared room in downtown. Looking for a clean roommate.</p>
-                        <h3>Details</h3>
-                        <ul><li>2 Bed / 1 Bath</li><li>Parking included</li></ul>
-                    </div>
-                </div>
-            </div>
-
-            <div class="card-wrapper listing-item" 
-                 data-price="1450" 
-                 data-roomtype="private" 
-                 data-bedrooms="3bed" 
-                 data-bathrooms="2bath" 
-                 data-amenities="pool gym ac parking">
-                <div class="card" tabindex="0">
-                    <div class="card-front">
-                        <div class="image-gallery">
-                            <img src="{% static 'images/apartment_pics/aprt2.jpeg' %}" alt="Apartment" class="apartment-image active" />
-                            <img src="{% static 'images/apartment_pics/kitchen4.avif' %}" alt="Apartment" class="apartment-image" />
-                            <img src="{% static 'images/apartment_pics/livingroom.avif' %}" alt="Apartment" class="apartment-image" />
-                            <div class="image-dots">
-                                <span class="dot active"></span><span class="dot"></span>
-                            </div>
-                        </div>
-                        <div class="details">
-                            <div class="user-info">
-                                <img src="{% static 'images/apartment_pics/pfp2.jpg' %}" class="user-pic" alt="User" />
-                                <span class="username">Sarah Martinez</span>
-                            </div>
-                            <div class="apartment-details">
-                                <p><strong>Location:</strong> West Hollywood</p>
-                                <p><strong>House:</strong> 3 Bed, 2 Bath | Private</p>
-                                <p><strong>Rent:</strong> <span class="price">$1,450</span></p>
-                                <p><strong>Amenities:</strong> Pool, Gym, Parking</p>
-                            </div>
-                            <button class="choose-button">View Details</button>
-                        </div>
-                    </div>
-                    <div class="card-back">
-                        <h2>About this listing</h2>
-                        <p>Luxury apartment with pool access. Private room available.</p>
-                    </div>
-                </div>
-            </div>
-
-            <div class="card-wrapper listing-item" 
-                 data-price="1800" 
-                 data-roomtype="private" 
-                 data-bedrooms="2bed" 
-                 data-bathrooms="2bath" 
-                 data-amenities="parking laundry">
-                <div class="card" tabindex="0">
-                    <div class="card-front">
-                        <div class="image-gallery">
-                            <img src="{% static 'images/apartment_pics/aprt3.jpeg' %}" alt="Apartment" class="apartment-image active" />
-                            <img src="{% static 'images/apartment_pics/kitchen4.avif' %}" alt="Apartment" class="apartment-image" />
-                            <img src="{% static 'images/apartment_pics/room3.avif' %}" alt="Apartment" class="apartment-image" />
-                            <div class="image-dots"><span class="dot active"></span></div>
-                        </div>
-                        <div class="details">
-                            <div class="user-info">
-                                <img src="{% static 'images/apartment_pics/pfp5.jpg' %}" class="user-pic" alt="User" />
-                                <span class="username">Marcus Johnson</span>
-                            </div>
-                            <div class="apartment-details">
-                                <p><strong>Location:</strong> Santa Monica</p>
-                                <p><strong>Apartment:</strong> 2 Bed, 2 Bath | Private</p>
-                                <p><strong>Rent:</strong> <span class="price">$1,800</span></p>
-                                <p><strong>Amenities:</strong> Parking, Laundry</p>
-                            </div>
-                            <button class="choose-button">View Details</button>
-                        </div>
-                    </div>
-                    <div class="card-back">
-                        <h2>About this listing</h2>
-                        <p>Beachside living! Private room with ensuite bath.</p>
-                    </div>
-                </div>
-            </div>
-
-
-            
-            <div id="noResults" style="display: none; text-align: center; padding: 40px; color: #fff;">
-                <h3>No apartments match your filters.</h3>
-                <p>Try adjusting your criteria or clearing filters.</p>
-            </div>
-
-        </main>
-
-        <aside class="map-column">
-            <div class="sticky-map-container">
-                <div id="map"></div>
-            </div>
-        </aside>
-
+  <!-- Left sidebar: scrollable listing cards -->
+  <aside class="listings-panel">
+    <div class="listings-panel__header">
+      <div class="listings-panel__header-text">
+        <h2 class="listings-panel__title" id="listings-count">Loading...</h2>
+        <p class="listings-panel__subtitle" id="listings-subtitle">in current map view</p>
+      </div>
+      <button class="apt-list-btn" id="btn-list-place">+ List Your Place</button>
     </div>
-
-    <div class="popup" id="userPopup">
-        <div class="popup-header">
-            <h3 id="popupTitle">User Profile</h3>
-            <button class="popup-close">×</button>
-        </div>
-        <div class="popup-content"></div>
+    <!-- All / Saved tabs -->
+    <div class="listings-panel__tabs">
+      <button class="listings-panel__tab listings-panel__tab--active" id="tab-all">All</button>
+      <button class="listings-panel__tab" id="tab-saved">♥ Saved</button>
     </div>
+    <!-- CardRenderer renders listing cards here -->
+    <div class="listings-panel__list" id="listings-container"></div>
+  </aside>
 
-    <div class="popup" id="addPostModal">
-        <div class="popup-header">
-            <h3>Create New Listing</h3>
-            <button class="popup-close" onclick="closeAddPostModal()">×</button>
-        </div>
-        <div class="popup-content">
-            <form id="addPostForm">
-                <div class="form-group">
-                    <label>Image URL (e.g. Unsplash)</label>
-                    <input type="text" id="postImage" placeholder="https://..." required>
-                </div>
-                
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>Location</label>
-                        <input type="text" id="postLocation" placeholder="e.g. Silver Lake" required>
-                    </div>
-                    <div class="form-group">
-                        <label>Price ($)</label>
-                        <input type="number" id="postPrice" placeholder="1200" required>
-                    </div>
-                </div>
+  <!-- Right panel: filter toolbar sits above the map -->
+  <section class="map-panel">
+    <!-- FilterManager renders the search + dropdown toolbar here -->
+    <div id="filter-container"></div>
+    <!-- Google Maps attaches here -->
+    <div class="map-panel__map" id="map-container"></div>
+  </section>
 
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>Bedrooms</label>
-                        <select id="postBeds">
-                            <option value="1bed">1 Bedroom</option>
-                            <option value="2bed">2 Bedrooms</option>
-                            <option value="3bed">3+ Bedrooms</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label>Bathrooms</label>
-                        <select id="postBaths">
-                            <option value="1bath">1 Bathroom</option>
-                            <option value="2bath">2+ Bathrooms</option>
-                        </select>
-                    </div>
-                </div>
+</main>
 
-                <div class="form-group">
-                    <label>Room Type</label>
-                    <select id="postType">
-                        <option value="private">Private Room</option>
-                        <option value="shared">Shared Room</option>
-                        <option value="entire">Entire Place</option>
-                    </select>
-                </div>
+<!-- Full-detail listing modal (ListingModal renders here) -->
+<div class="detail-modal" id="detail-modal"></div>
 
-                <div class="form-group">
-                    <label>Amenities (Hold Ctrl/Cmd to select multiple)</label>
-                    <select id="postAmenities" multiple style="height: 80px;">
-                        <option value="parking">Parking</option>
-                        <option value="gym">Gym</option>
-                        <option value="pool">Pool</option>
-                        <option value="laundry">Laundry</option>
-                        <option value="ac">Air Conditioning</option>
-                    </select>
-                </div>
+<!-- Create-listing modal (CreateListingModal renders here) -->
+<div class="create-modal" id="create-listing-modal"></div>
 
-                <div class="form-group">
-                    <label>Description</label>
-                    <textarea id="postDesc" rows="4" placeholder="Brief description..."></textarea>
-                </div>
+<!--
+  Google Maps JavaScript API
+  - libraries=places enables the Places Autocomplete used by filters.js
+  - loading=async defers init until google.maps is ready
+-->
+<script async
+  src="https://maps.googleapis.com/maps/api/js?key={{ GOOGLE_MAPS_API_KEY }}&libraries=places&loading=async">
+</script>
 
-                <button type="submit" class="submit-btn">Post Listing</button>
-            </form>
-        </div>
-    </div>
+<!--
+  JS modules converted from ES-module format to regular scripts.
+  Load order matters: each module must be present before apartment_script.js
+  initializes them.
 
-</div>
-
-<script async src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAczJVb_-U_XpOXDMlE1nODMDv91Qn2vXU&callback=initMap"></script>
+  apartment_utils.js    – shared pure helpers (LivioUtils)
+  apartment_event_bus.js – pub/sub EventBus used by all modules
+  (remaining modules depend on both of the above)
+-->
+<script src="{% static 'js/apartment_utils.js' %}"></script>
+<script src="{% static 'js/apartment_event_bus.js' %}"></script>
+<script src="{% static 'js/apartment_map_manager.js' %}"></script>
+<script src="{% static 'js/apartment_cards_renderer.js' %}"></script>
+<script src="{% static 'js/apartment_filter_manager.js' %}"></script>
+<script src="{% static 'js/apartment_listing_detail.js' %}"></script>
+<script src="{% static 'js/apartment_create_modal.js' %}"></script>
+<!-- Favorites management + toast notifications -->
+<script src="{% static 'js/api_integration.js' %}"></script>
+<!-- Entry point: fetches data, wires all modules together -->
 <script src="{% static 'js/apartment_script.js' %}"></script>
 
 {% endblock %}

@@ -3,6 +3,11 @@
 // first populate the dropdown menu's with the proper stuff 
 document.addEventListener('DOMContentLoaded', async (event)=>{
 
+    if (!localStorage.getItem('access_token')) {
+        window.location.href = '/login/?next=' + encodeURIComponent(window.location.pathname);
+        return;
+    }
+
     document.querySelector('.search-box').style.display = 'none'; // hides the search bar for this
 
     const genderDropDown = document.getElementById('gender_dropdown'); 

@@ -1,0 +1,330 @@
+/**
+ * apartment_filters.css
+ * Migrated from demo_map/frontend/css/filters.css
+ *
+ * Horizontal filter toolbar above the map.
+ * BEM prefix "ftb" (filter toolbar).
+ */
+
+/* ── Toolbar wrapper ─────────────────────────────────── */
+.ftb {
+  position: relative;
+  padding: 10px 14px;
+  background: #ffffff;
+  border-bottom: 1px solid #e0e0e0;
+  z-index: 10;
+  flex-shrink: 0;
+}
+
+/* ── Rows ────────────────────────────────────────────── */
+.ftb__row { margin-bottom: 8px; }
+.ftb__row:last-child { margin-bottom: 0; }
+
+/* ── Search + target row ─────────────────────────────── */
+.ftb__search-row {
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+}
+
+.ftb__target {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0 10px;
+  border: 1.5px solid #006aff;
+  border-radius: 6px;
+  background: #f0f4ff;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+.ftb__target-icon { color: #006aff; flex-shrink: 0; }
+
+.ftb__target-select {
+  border: none;
+  background: transparent;
+  font-size: 12px;
+  font-weight: 700;
+  color: #006aff;
+  cursor: pointer;
+  outline: none;
+  font-family: inherit;
+  padding: 6px 2px;
+  max-width: 150px;
+}
+
+/* ── Search input ────────────────────────────────────── */
+.ftb__search {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+}
+
+.ftb__search-input {
+  width: 100%;
+  padding: 8px 12px 8px 34px;
+  border: 1px solid #d0d5dd;
+  border-radius: 6px;
+  font-size: 13px;
+  font-family: inherit;
+  color: #2a2a2a;
+  background: #ffffff;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.ftb__search-input:focus {
+  border-color: #006aff;
+  box-shadow: 0 0 0 3px rgba(0, 106, 255, 0.10);
+}
+
+.ftb__search-input::placeholder { color: #999999; }
+
+.ftb__search-icon {
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #999999;
+  pointer-events: none;
+}
+
+/* ── Autocomplete dropdown ───────────────────────────── */
+.ftb__autocomplete {
+  display: none;
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  margin-top: 4px;
+  background: #ffffff;
+  border: 1px solid #d0d5dd;
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  z-index: 200;
+  overflow: hidden;
+}
+
+.ftb__ac-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
+  cursor: pointer;
+  transition: background 0.1s;
+}
+
+.ftb__ac-item:hover,
+.ftb__ac-item--active { background: #f0f4ff; }
+
+.ftb__ac-item + .ftb__ac-item { border-top: 1px solid #f0f0f0; }
+
+.ftb__ac-icon { flex-shrink: 0; color: #006aff; opacity: 0.7; }
+
+.ftb__ac-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.ftb__ac-name {
+  font-size: 13px;
+  color: #2a2a2a;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ftb__ac-name strong { color: #006aff; font-weight: 700; }
+
+.ftb__ac-type { font-size: 11px; color: #888888; margin-top: 1px; }
+
+.ftb__ac-sep {
+  padding: 5px 12px;
+  font-size: 10px;
+  color: #999999;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-top: 1px solid #e0e0e0;
+  background: #fafafa;
+}
+
+.ftb__ac-item--place .ftb__ac-icon { color: #e53935; opacity: 0.8; }
+
+/* ── Filter dropdown buttons row ─────────────────────── */
+.ftb__buttons {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 0 !important;
+}
+
+.ftb__btn-wrap { position: relative; }
+
+.ftb__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 10px;
+  border: 1px solid #d0d5dd;
+  border-radius: 6px;
+  background: #ffffff;
+  color: #333333;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.12s, border-color 0.12s, color 0.12s;
+}
+
+.ftb__btn:hover { border-color: #006aff; background: #f0f4ff; }
+
+.ftb__btn--active {
+  border-color: #006aff;
+  background: #f0f4ff;
+  color: #006aff;
+}
+
+.ftb__btn--has-value {
+  border-color: #006aff;
+  color: #006aff;
+  background: #eef3ff;
+}
+
+.ftb__chevron { color: inherit; opacity: 0.6; flex-shrink: 0; }
+
+/* ── Dropdown panels ─────────────────────────────────── */
+.ftb__panel {
+  display: none;
+  position: absolute;
+  z-index: 150;
+  background: #ffffff;
+  border: 1px solid #d0d5dd;
+  border-radius: 8px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
+  padding: 10px;
+  min-width: 160px;
+}
+
+.ftb__panel--open {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.ftb__panel--wide { min-width: 280px; max-width: 360px; }
+
+/* ── Checkbox labels inside panels ───────────────────── */
+.ftb__check {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 9px;
+  border: 1px solid #e8e8e8;
+  border-radius: 5px;
+  background: #ffffff;
+  cursor: pointer;
+  font-size: 12px;
+  color: #444444;
+  user-select: none;
+  transition: background 0.12s, border-color 0.12s;
+}
+
+.ftb__check:hover { border-color: #006aff; background: #f0f4ff; }
+
+.ftb__check input[type="checkbox"] {
+  width: 13px; height: 13px;
+  accent-color: #006aff;
+  margin: 0; cursor: pointer;
+}
+
+.ftb__check input[type="checkbox"]:checked + span { color: #006aff; font-weight: 600; }
+
+/* ── Select inside panels ────────────────────────────── */
+.ftb__select {
+  width: 100%;
+  padding: 7px 10px;
+  border: 1px solid #d0d5dd;
+  border-radius: 5px;
+  font-size: 13px;
+  font-family: inherit;
+  color: #2a2a2a;
+  background: #ffffff;
+  cursor: pointer;
+  outline: none;
+}
+
+.ftb__select:focus { border-color: #006aff; }
+
+/* ── Number range inside panels ──────────────────────── */
+.ftb__range { display: flex; align-items: center; gap: 6px; }
+.ftb__range-sep { color: #999999; font-size: 14px; }
+
+.ftb__num {
+  flex: 1;
+  padding: 7px 10px;
+  border: 1px solid #d0d5dd;
+  border-radius: 5px;
+  font-size: 12px;
+  font-family: inherit;
+  color: #2a2a2a;
+  outline: none;
+  max-width: 110px;
+}
+
+.ftb__num:focus { border-color: #006aff; }
+.ftb__num::placeholder { color: #aaaaaa; }
+
+.ftb__num::-webkit-outer-spin-button,
+.ftb__num::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.ftb__num { -moz-appearance: textfield; }
+
+/* ── Active filter chips ─────────────────────────────── */
+.ftb__chips { display: flex; flex-wrap: wrap; gap: 5px; padding-top: 8px; }
+.ftb__chips:empty { display: none; }
+
+.ftb__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: 4px;
+  background: #eef3ff;
+  color: #006aff;
+  font-size: 11px;
+  font-weight: 600;
+  font-family: inherit;
+  border: 1px solid #c8d8ff;
+  white-space: nowrap;
+}
+
+.ftb__chip-x {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px; height: 16px;
+  border: none;
+  background: transparent;
+  color: #006aff;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  border-radius: 3px;
+  padding: 0; line-height: 1;
+  transition: background 0.12s, color 0.12s;
+}
+
+.ftb__chip-x:hover { background: #006aff; color: #ffffff; }
+
+.ftb__chip--reset {
+  background: transparent;
+  border-color: #d0d5dd;
+  color: #888888;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.12s, color 0.12s, border-color 0.12s;
+}
+
+.ftb__chip--reset:hover { background: #fff0f0; color: #d32f2f; border-color: #d32f2f; }

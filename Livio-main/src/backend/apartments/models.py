@@ -93,6 +93,11 @@ class ApartmentPost(models.Model):
         max_length=500,
         default='https://images.unsplash.com/photo-1522708323590-d24dbb6b0267'
     )
+    images = models.JSONField(
+        default=list,
+        blank=True,
+        help_text="List of S3 image URLs (up to 10)"
+    )
     
     # Owner Info
     owner = models.ForeignKey(
@@ -164,8 +169,7 @@ class ApartmentPost(models.Model):
                 self.latitude = Decimal('34.0522')
                 self.longitude = Decimal('-118.2437')
                 
-        except Exception as e:
-            print(f"Geocoding error: {e}")
+        except Exception:
             # Default to LA coordinates
             self.latitude = Decimal('34.0522')
             self.longitude = Decimal('-118.2437')
@@ -183,13 +187,23 @@ class ApartmentPost(models.Model):
             return []
         return [a.strip() for a in self.amenities.split(',')]
     
-    def get_bedrooms_display(self):
-        """Return formatted bedroom count."""
-        return self.get_bedrooms_display()
-    
-    def get_bathrooms_display(self):
-        """Return formatted bathroom count."""
-        return self.get_bathrooms_display()
+class University(models.Model):
+    """
+    California university campus — used for map pill markers
+    and distance calculations in the apartment finder.
+    Populated via: python manage.py seed_universities
+    """
+    name     = models.CharField(max_length=20,  unique=True, help_text="Short abbreviation, e.g. CSUN")
+    fullName = models.CharField(max_length=200, help_text="Full official name")
+    lat      = models.DecimalField(max_digits=9, decimal_places=6)
+    lng      = models.DecimalField(max_digits=9, decimal_places=6)
+
+    class Meta:
+        verbose_name_plural = 'Universities'
+        ordering = ['name']
+
+    def __str__(self):
+        return self.name
 
 
 class FavoriteApartment(models.Model):
@@ -222,12 +236,6 @@ class FavoriteApartment(models.Model):
     created_at = models.DateTimeField(
         auto_now_add=True,
         help_text="When the apartment was favorited"
-    )
-    
-    notes = models.TextField(
-        blank=True,
-        null=True,
-        help_text="Optional notes about why user likes this apartment"
     )
     
     class Meta:
