@@ -324,6 +324,16 @@ class MapManager {
   highlightMarker(listingId)  { this.showInfoWindow(listingId); }
   unhighlightMarker()         { this.hideInfoWindow(); }
 
+  removeListingMarker(listingId) {
+    const idx = this.priceMarkers.findIndex((m) => m.listing.id === listingId);
+    if (idx === -1) return;
+    const entry = this.priceMarkers[idx];
+    if (this.activeMarkerId === listingId) this.hideInfoWindow();
+    entry.overlay.setMap(null);
+    entry.infoWindow.close();
+    this.priceMarkers.splice(idx, 1);
+  }
+
   // ── Search highlight + geocoding ─────────────────
 
   fitBoundsToListings(listings) {

@@ -163,8 +163,34 @@
       </div>
     </div>
 
+    <!-- My Apartment Listings Section -->
+    <section class="profile-listings-section" id="myListingsSection">
+      <div class="profile-listings-header">
+        <h2><i class="fa-solid fa-building"></i> My Apartment Listings</h2>
+        <button type="button" class="profile-listings-add-btn" id="createListingBtn">
+          <i class="fa-solid fa-plus"></i>
+          <span>Post New Listing</span>
+        </button>
+      </div>
+      <div class="profile-listings-grid" id="profileListingsGrid">
+        <p class="profile-listings-loading" id="profileListingsLoading">
+          <i class="fa-solid fa-spinner fa-spin"></i> Loading your listings...
+        </p>
+        <div class="profile-listings-empty" id="profileListingsEmpty" style="display:none;">
+          <i class="fa-solid fa-house-circle-xmark"></i>
+          <p>You haven't posted any listings yet.</p>
+          <button type="button" class="btn-primary" id="createListingEmptyBtn">
+            <i class="fa-solid fa-plus"></i> Post Your First Listing
+          </button>
+        </div>
+      </div>
+    </section>
+
   </main>
 </div>
+
+<!-- Listing modal for profile page (same create-modal markup, separate instance) -->
+<div class="create-modal" id="profile-create-modal"></div>
 
 <!-- Create Roommate Post Modal -->
 <div id="roommatePostModal" class="profile-modal" role="dialog" aria-modal="true">
@@ -278,5 +304,10 @@
 <!-- Toast Notification -->
 <div id="toast" class="toast"></div>
 
+<script async
+  src="https://maps.googleapis.com/maps/api/js?key={{ GOOGLE_MAPS_API_KEY }}&libraries=places&loading=async">
+</script>
+<script src="{% static 'js/apartment_utils.js' %}"></script>
+<script src="{% static 'js/apartment_create_modal.js' %}"></script>
 <script src="{% static 'js/profile.js' %}"></script>
 {% endblock %}

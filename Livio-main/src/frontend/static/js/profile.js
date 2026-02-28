@@ -565,6 +565,169 @@
   // };
 
   // =================================================================
+  // MY APARTMENT LISTINGS
+  // =================================================================
+  var profileCreateModal = null;
+
+  function initProfileListingModal() {
+    if (document.getElementById('profile-create-modal')) {
+      profileCreateModal = new CreateListingModal('profile-create-modal');
+      profileCreateModal.onSuccess(function() {
+        loadMyListings();
+      });
+      profileCreateModal.onEditSuccess(function() {
+        loadMyListings();
+      });
+    }
+  }
+
+  async function loadMyListings() {
+    const grid    = document.getElementById('profileListingsGrid');
+    const loading = document.getElementById('profileListingsLoading');
+    const empty   = document.getElementById('profileListingsEmpty');
+    if (!grid) return;
+
+    if (loading) loading.style.display = 'block';
+    if (empty)   empty.style.display   = 'none';
+    Array.from(grid.querySelectorAll('.profile-listing-card')).forEach(function(el) { el.remove(); });
+
+    try {
+      const response = await apiRequest(`${API_BASE}/apartments/api/my-listings/`);
+      if (!response || !response.ok) { if (loading) loading.style.display = 'none'; return; }
+      const listings = await response.json();
+      if (loading) loading.style.display = 'none';
+
+      if (listings.length === 0) {
+        if (empty) empty.style.display = 'flex';
+        return;
+      }
+      listings.forEach(function(raw) { grid.appendChild(_buildListingCard(raw)); });
+    } catch (e) {
+      console.error('loadMyListings error:', e);
+      if (loading) loading.style.display = 'none';
+    }
+  }
+
+  function _buildListingCard(raw) {
+    const card = document.createElement('div');
+    card.className = 'profile-listing-card';
+    card.dataset.id = raw.id;
+
+    const rent  = raw.monthly_rent ? '$' + parseFloat(raw.monthly_rent).toLocaleString() + '/mo' : '—';
+    const beds  = raw.bedrooms  || '—';
+    const baths = raw.bathrooms || '—';
+    const city  = [raw.city, raw.state].filter(Boolean).join(', ') || raw.location || '—';
+    const hue   = (raw.id * 47) % 360;
+    const img   = raw.image_url
+      ? `<div class="plc__img" style="background:url('${raw.image_url}') center/cover no-repeat;"></div>`
+      : `<div class="plc__img" style="background:hsl(${hue},48%,44%);"></div>`;
+
+    card.innerHTML = `
+      ${img}
+      <div class="plc__body">
+        <div class="plc__title">${_escapeHtml(raw.title)}</div>
+        <div class="plc__meta">${rent} &bull; ${beds} bd &bull; ${baths} ba</div>
+        <div class="plc__city">${_escapeHtml(city)}</div>
+      </div>
+      <div class="plc__actions">
+        <button class="plc__btn plc__btn--edit" aria-label="Edit listing">
+          <i class="fa-solid fa-pen"></i> Edit
+        </button>
+        <button class="plc__btn plc__btn--delete" aria-label="Delete listing">
+          <i class="fa-solid fa-trash"></i> Delete
+        </button>
+      </div>`;
+
+    card.querySelector('.plc__btn--edit').addEventListener('click', function() {
+      if (!profileCreateModal) return;
+      profileCreateModal.openForEdit({
+        id:          raw.id,
+        title:       raw.title || '',
+        description: raw.description || '',
+        price:       parseFloat(raw.monthly_rent) || 0,
+        bedrooms:    _parseBedrooms(raw.bedrooms),
+        bathrooms:   _parseBathrooms(raw.bathrooms),
+        sqft:        raw.square_feet ? parseInt(raw.square_feet, 10) : null,
+        address:     [raw.location, raw.city, raw.state].filter(Boolean).join(', '),
+        type:        _roomTypeLabel(raw.room_type),
+        amenities:   _parseAmenities(raw.amenities),
+        image_url:   raw.image_url || null,
+        is_owner:    true,
+      });
+    });
+
+    card.querySelector('.plc__btn--delete').addEventListener('click', function() {
+      if (!confirm('Delete "' + raw.title + '"?\nThis cannot be undone.')) return;
+      _deleteMyListing(raw.id, card);
+    });
+
+    return card;
+  }
+
+  async function _deleteMyListing(id, cardEl) {
+    const token = getAccessToken();
+    try {
+      const response = await fetch(`${API_BASE}/apartments/api/apartments/${id}/`, {
+        method:      'DELETE',
+        headers: {
+          'Authorization': 'Bearer ' + token,
+          'X-CSRFToken':   _getCsrfToken(),
+        },
+        credentials: 'include',
+      });
+      if (response.ok || response.status === 204) {
+        cardEl.remove();
+        showToast('Listing deleted.', 'success');
+        const grid  = document.getElementById('profileListingsGrid');
+        const empty = document.getElementById('profileListingsEmpty');
+        if (grid && empty && grid.querySelectorAll('.profile-listing-card').length === 0) {
+          empty.style.display = 'flex';
+        }
+      } else {
+        showToast('Failed to delete listing.', 'error');
+      }
+    } catch (e) {
+      console.error('Delete listing error:', e);
+      showToast('An error occurred.', 'error');
+    }
+  }
+
+  function _escapeHtml(str) {
+    return String(str || '')
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  function _getCsrfToken() {
+    const match = document.cookie.match(/csrftoken=([^;]+)/);
+    return match ? match[1] : '';
+  }
+
+  function _parseBedrooms(val) {
+    if (!val) return 1;
+    if (String(val).toLowerCase() === 'studio') return 0;
+    var m = String(val).match(/^(\d+)/);
+    return m ? parseInt(m[1], 10) : 1;
+  }
+
+  function _parseBathrooms(val) {
+    if (!val) return 1;
+    var m = String(val).match(/^(\d+)/);
+    return m ? parseInt(m[1], 10) : 1;
+  }
+
+  function _roomTypeLabel(val) {
+    var map = { private: 'Private Room', shared: 'Shared Room', entire: 'Apartment', studio: 'Studio' };
+    return map[val] || 'Apartment';
+  }
+
+  function _parseAmenities(val) {
+    if (!val) return [];
+    if (Array.isArray(val)) return val;
+    return String(val).split(',').map(function(s) { return s.trim(); }).filter(Boolean);
+  }
+
+  // =================================================================
   // LOGOUT
   // =================================================================
   function logout() {
@@ -675,6 +838,15 @@
 
     // Load user account info
     loadAccountInfo();
+
+    // My Listings section
+    initProfileListingModal();
+    loadMyListings();
+
+    const createListingBtn      = document.getElementById('createListingBtn');
+    const createListingEmptyBtn = document.getElementById('createListingEmptyBtn');
+    if (createListingBtn)      createListingBtn.addEventListener('click',      function() { if (profileCreateModal) profileCreateModal.open(); });
+    if (createListingEmptyBtn) createListingEmptyBtn.addEventListener('click', function() { if (profileCreateModal) profileCreateModal.open(); });
   });
 
   // Load account info from stored data or API

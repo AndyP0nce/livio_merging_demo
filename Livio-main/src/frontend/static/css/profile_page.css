@@ -852,3 +852,280 @@
 body.modal-open {
     overflow: hidden;
 }
+/* =================================================================
+   MY APARTMENT LISTINGS SECTION
+   ================================================================= */
+
+.profile-listings-section {
+    background: rgba(20, 20, 20, 0.75);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 16px;
+    padding: 28px 32px 32px;
+}
+
+.profile-listings-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+.profile-listings-header h2 {
+    font-size: 1.15rem;
+    font-weight: 600;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 0;
+}
+
+.profile-listings-header h2 i {
+    color: #4ade80;
+}
+
+.profile-listings-add-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 18px;
+    background: #4ade80;
+    color: #0d0d0d;
+    border: none;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.15s;
+    white-space: nowrap;
+}
+
+.profile-listings-add-btn:hover {
+    background: #22c55e;
+    transform: translateY(-1px);
+}
+
+/* Grid of listing cards */
+.profile-listings-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 16px;
+}
+
+/* Loading state */
+.profile-listings-loading {
+    grid-column: 1 / -1;
+    color: rgba(255,255,255,0.5);
+    font-size: 0.9rem;
+    padding: 24px 0;
+    text-align: center;
+}
+
+/* Empty state */
+.profile-listings-empty {
+    grid-column: 1 / -1;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    padding: 36px 16px;
+    color: rgba(255,255,255,0.45);
+    text-align: center;
+}
+
+.profile-listings-empty i {
+    font-size: 2.4rem;
+    color: rgba(255,255,255,0.2);
+}
+
+.profile-listings-empty p {
+    margin: 0;
+    font-size: 0.9rem;
+}
+
+/* Individual listing card */
+.profile-listing-card {
+    background: rgba(255,255,255,0.07);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 12px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    transition: border-color 0.2s, transform 0.2s;
+}
+
+.profile-listing-card:hover {
+    border-color: rgba(74,222,128,0.35);
+    transform: translateY(-2px);
+}
+
+.plc__img {
+    height: 130px;
+    width: 100%;
+    flex-shrink: 0;
+}
+
+.plc__body {
+    padding: 14px 14px 8px;
+    flex: 1;
+}
+
+.plc__title {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #fff;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-bottom: 4px;
+}
+
+.plc__meta {
+    font-size: 0.78rem;
+    color: #4ade80;
+    font-weight: 500;
+    margin-bottom: 3px;
+}
+
+.plc__city {
+    font-size: 0.75rem;
+    color: rgba(255,255,255,0.45);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.plc__actions {
+    display: flex;
+    gap: 8px;
+    padding: 10px 14px 14px;
+    border-top: 1px solid rgba(255,255,255,0.07);
+}
+
+.plc__btn {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 7px 0;
+    border: 1px solid transparent;
+    border-radius: 7px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.18s, border-color 0.18s;
+}
+
+.plc__btn--edit {
+    background: rgba(74,222,128,0.12);
+    color: #4ade80;
+    border-color: rgba(74,222,128,0.25);
+}
+
+.plc__btn--edit:hover {
+    background: rgba(74,222,128,0.22);
+    border-color: rgba(74,222,128,0.5);
+}
+
+.plc__btn--delete {
+    background: rgba(239,68,68,0.1);
+    color: #f87171;
+    border-color: rgba(239,68,68,0.2);
+}
+
+.plc__btn--delete:hover {
+    background: rgba(239,68,68,0.2);
+    border-color: rgba(239,68,68,0.45);
+}
+
+/* Card owner-actions on the apartment listings page */
+.listing-card__owner-actions {
+    display: flex;
+    gap: 6px;
+    padding: 8px 12px 10px;
+    border-top: 1px solid #e8e8e8;
+    margin-top: 4px;
+}
+
+.listing-card__owner-btn {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    padding: 5px 0;
+    border-radius: 6px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: background 0.15s, border-color 0.15s;
+}
+
+.listing-card__owner-btn--edit {
+    background: #f0fdf4;
+    color: #16a34a;
+    border-color: #bbf7d0;
+}
+
+.listing-card__owner-btn--edit:hover {
+    background: #dcfce7;
+    border-color: #86efac;
+}
+
+.listing-card__owner-btn--delete {
+    background: #fef2f2;
+    color: #dc2626;
+    border-color: #fecaca;
+}
+
+.listing-card__owner-btn--delete:hover {
+    background: #fee2e2;
+    border-color: #fca5a5;
+}
+
+/* Detail modal owner-actions section */
+.detail-modal__owner-actions .detail-modal__action-row {
+    display: flex;
+    gap: 10px;
+}
+
+.detail-modal__action-btn {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 10px 0;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: background 0.15s, border-color 0.15s;
+}
+
+.detail-modal__action-btn--edit {
+    background: #f0fdf4;
+    color: #15803d;
+    border-color: #bbf7d0;
+}
+
+.detail-modal__action-btn--edit:hover {
+    background: #dcfce7;
+    border-color: #86efac;
+}
+
+.detail-modal__action-btn--delete {
+    background: #fef2f2;
+    color: #dc2626;
+    border-color: #fecaca;
+}
+
+.detail-modal__action-btn--delete:hover {
+    background: #fee2e2;
+    border-color: #fca5a5;
+}

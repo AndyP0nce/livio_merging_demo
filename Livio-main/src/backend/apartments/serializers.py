@@ -49,7 +49,8 @@ class ApartmentPostSerializer(serializers.ModelSerializer):
     owner_info = UserSerializer(source='owner', read_only=True)
     amenities_list = serializers.SerializerMethodField()
     is_favorited = serializers.SerializerMethodField()
-    
+    is_owner = serializers.SerializerMethodField()
+
     class Meta:
         model = ApartmentPost
         fields = [
@@ -59,6 +60,7 @@ class ApartmentPostSerializer(serializers.ModelSerializer):
             'location',
             'city',
             'state',
+            'zip_code',
             'latitude',
             'longitude',
             'coordinates',
@@ -70,6 +72,7 @@ class ApartmentPostSerializer(serializers.ModelSerializer):
             'amenities',
             'amenities_list',
             'image_url',
+            'images',
             'owner',
             'owner_info',
             'is_active',
@@ -77,17 +80,18 @@ class ApartmentPostSerializer(serializers.ModelSerializer):
             'created_at',
             'updated_at',
             'is_favorited',
+            'is_owner',
         ]
         read_only_fields = ['id', 'created_at', 'updated_at', 'owner']
-    
+
     def get_coordinates(self, obj):
         """Return coordinates in Google Maps format."""
         return obj.get_coordinates()
-    
+
     def get_amenities_list(self, obj):
         """Return amenities as array."""
         return obj.get_amenities_list()
-    
+
     def get_is_favorited(self, obj):
         """Check if current user has favorited this apartment."""
         request = self.context.get('request')
@@ -96,6 +100,13 @@ class ApartmentPostSerializer(serializers.ModelSerializer):
                 user=request.user,
                 apartment=obj
             ).exists()
+        return False
+
+    def get_is_owner(self, obj):
+        """Check if the requesting user is the owner of this apartment."""
+        request = self.context.get('request')
+        if request and request.user.is_authenticated:
+            return obj.owner_id == request.user.id
         return False
 
 
@@ -121,9 +132,10 @@ class ApartmentPostCreateSerializer(serializers.ModelSerializer):
             'room_type',
             'amenities',
             'image_url',
+            'images',
             'available_from',
         ]
-    
+
     def create(self, validated_data):
         """
         Create apartment with current user as owner.

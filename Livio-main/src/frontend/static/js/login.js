@@ -8,13 +8,22 @@
 
     const API_BASE = 'http://127.0.0.1:8000';
 
-    // Check if already logged in
+    // Check if already logged in with a *valid* (non-expired) token
     document.addEventListener('DOMContentLoaded', function() {
         const token = localStorage.getItem('access_token');
         if (token) {
-            // Already logged in, redirect to profile
-            window.location.href = '/profile/';
-            return;
+            try {
+                const payload = JSON.parse(atob(token.split('.')[1]));
+                const nowSec = Math.floor(Date.now() / 1000);
+                if (payload.exp > nowSec) {
+                    // Token is still valid — redirect to profile
+                    window.location.href = '/profile/';
+                    return;
+                }
+            } catch (_) {
+                // Malformed token — let them log in fresh
+            }
+            // Token exists but is expired — don't redirect, let them log in
         }
     });
 

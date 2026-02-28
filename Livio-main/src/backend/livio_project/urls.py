@@ -30,7 +30,10 @@ def signup(request):
     return render(request, "signup_page.html")
 
 def profile(request):
-    return render(request, "profile_page.html")
+    from django.conf import settings
+    return render(request, "profile_page.html", {
+        'GOOGLE_MAPS_API_KEY': settings.GOOGLE_MAPS_API_KEY
+    })
 
 def apartment_map(request):
     return render(request, "aprt_map_api.html")

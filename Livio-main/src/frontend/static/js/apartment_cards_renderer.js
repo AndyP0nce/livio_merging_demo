@@ -87,6 +87,18 @@ class CardRenderer {
       ? `<div class="listing-card__img listing-card__img--photo" style="background:url('${listing.image_url}') center/cover no-repeat;">`
       : `<div class="listing-card__img" style="background:${listing.imageColor};">`;
 
+    const ownerActionsHTML = listing.is_owner ? `
+      <div class="listing-card__owner-actions">
+        <button class="listing-card__owner-btn listing-card__owner-btn--edit" data-id="${listing.id}" aria-label="Edit listing">
+          <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          Edit
+        </button>
+        <button class="listing-card__owner-btn listing-card__owner-btn--delete" data-id="${listing.id}" aria-label="Delete listing">
+          <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg>
+          Delete
+        </button>
+      </div>` : '';
+
     card.innerHTML = `
       ${imgSection}
         <span class="listing-card__price">$${listing.price.toLocaleString()}/mo</span>
@@ -112,6 +124,7 @@ class CardRenderer {
           </span>
           ${distLabel ? `<span class="listing-card__distance">${distLabel} from ${targetName}</span>` : ''}
         </div>
+        ${ownerActionsHTML}
       </div>`;
 
     // Heart button — stop propagation so it doesn't open the detail modal
@@ -119,6 +132,22 @@ class CardRenderer {
       e.stopPropagation();
       if (typeof toggleFavorite === 'function') toggleFavorite(listing.id);
     });
+
+    // Owner edit/delete buttons
+    const editBtn = card.querySelector('.listing-card__owner-btn--edit');
+    if (editBtn) {
+      editBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this._bus.publish('listing:edit', { listingId: listing.id });
+      });
+    }
+    const deleteBtn = card.querySelector('.listing-card__owner-btn--delete');
+    if (deleteBtn) {
+      deleteBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this._bus.publish('listing:delete', { listingId: listing.id });
+      });
+    }
 
     card.addEventListener('mouseenter', () =>
       this._bus.publish('card:hovered', { listingId: listing.id, isHovering: true }));
