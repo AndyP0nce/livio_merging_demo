@@ -1,26 +1,22 @@
 """
 utils.py
 --------
-Pure-Python equivalents of the JavaScript helper functions that previously
-lived in the frontend (app.js / filters.js).
+Server-side filter helpers for the apartments app.
 
-Moving these here means:
-  - The backend can compute distances and filter listings server-side.
-  - The frontend no longer needs to download every listing just to filter them.
-  - The same logic can be unit-tested without a browser.
+apply_listing_filters mirrors the frontend FilterManager.applyFilters() logic
+from the old demo map (filters.js / app.js), ported to Python so the database
+does the work instead of the browser.
 
 Original JS locations:
-  haversine_distance_mi  →  app.js  haversineDistanceMi()
-  parse_bedrooms         →  serializers.py  get_bedrooms()  (already existed)
-  parse_bathrooms        →  serializers.py  get_bathrooms() (already existed)
+  haversine_distance_mi  →  app.js      haversineDistanceMi()
   apply_listing_filters  →  filters.js  applyFilters()
 """
 
 import math
-import re
+from django.db.models import Q
 
 
-# ── Distance calculation ──────────────────────────────────────────────────────
+# ── Distance calculation ───────────────────────────────────────────────────────
 
 def haversine_distance_mi(lat1: float, lng1: float, lat2: float, lng2: float) -> float:
     """
@@ -56,72 +52,7 @@ def haversine_distance_mi(lat1: float, lng1: float, lat2: float, lng2: float) ->
     return R * 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
 
 
-# ── Bedrooms / bathrooms normalisation ───────────────────────────────────────
-
-def parse_bedrooms(value: str) -> int:
-    """
-    Convert the DB bedrooms string ('Studio', '1', '2', '3', '4+') to an int.
-    Studio → 0,  '4+' → 4,  anything invalid → 0.
-
-    JS equivalent (serializers.py already had this, ported here for reuse):
-        get_bedrooms(obj): 'studio' → 0, else parseInt(obj.bedrooms)
-    """
-    if not value:
-        return 0
-    if value.strip().lower() == 'studio':
-        return 0
-    try:
-        return int(value.replace('+', ''))
-    except (ValueError, TypeError):
-        return 0
-
-
-def parse_bathrooms(value: str) -> float:
-    """
-    Convert the DB bathrooms string ('1', '1.5', '2', '2.5', '3') to a float.
-    Anything invalid → 1.0.
-    """
-    try:
-        return float(value)
-    except (ValueError, TypeError):
-        return 1.0
-
-
-# ── Address parsing helpers ───────────────────────────────────────────────────
-
-def parse_city_from_address(address: str) -> str:
-    """
-    Extract city from a combined address string like '123 Main St, Northridge, CA 91324'.
-
-    JavaScript original (filters.js):
-        _parseCity(address) {
-            const parts = address.split(',');
-            return parts.length >= 2 ? parts[1].trim() : '';
-        }
-
-    NOTE: The ApartmentPost model now has a dedicated `city` column, so in most
-    cases you should use that directly. This helper is kept for edge cases where
-    only the combined address string is available.
-    """
-    parts = address.split(',')
-    return parts[1].strip() if len(parts) >= 2 else ''
-
-
-def parse_zip_from_address(address: str) -> str:
-    """
-    Extract a 5-digit zip code from a combined address string.
-
-    JavaScript original (filters.js):
-        _parseZip(address) {
-            const match = address.match(/\\d{5}$/);
-            return match ? match[0] : '';
-        }
-    """
-    match = re.search(r'\d{5}$', address)
-    return match.group(0) if match else ''
-
-
-# ── Server-side listing filter (mirrors filters.js applyFilters) ──────────────
+# ── Server-side listing filter (mirrors filters.js applyFilters) ───────────────
 
 def apply_listing_filters(queryset, params: dict):
     """
@@ -131,62 +62,57 @@ def apply_listing_filters(queryset, params: dict):
     Instead of filtering a JS array in the browser, we filter the Django queryset
     before it ever leaves the database — faster and uses less bandwidth.
 
-    Supported params (all optional):
-        type        – exact room type match (e.g. 'Apartment', 'House')
-        min_beds    – minimum bedroom count (0 = Studio)
-        min_baths   – minimum bathroom count (supports 1, 1.5, 2, …)
-        price_min   – minimum monthly rent
-        price_max   – maximum monthly rent
-        sqft_min    – minimum square feet
-        sqft_max    – maximum square feet
-        amenity     – amenity name(s); repeat param for multiple
-                      (e.g. ?amenity=WiFi&amenity=Pool)
-        city        – city name (case-insensitive contains)
-        zip         – exact zip code
-        uni_lat     – university latitude  ┐ both required for
-        uni_lng     – university longitude ┘ distance filtering
-        max_distance_mi – max distance from university in miles
+    Param names match livio's existing API contract (see views.py ApartmentListAPI):
 
-    JavaScript original (filters.js applyFilters):
-        applyFilters(listings) {
-            return listings.filter((listing) => {
-                if (state.types.size > 0 && !state.types.has(listing.type)) return false;
-                if (listing.bedrooms < state.minBeds) return false;
-                if (listing.bathrooms < state.minBaths) return false;
-                if (listing.price < state.priceMin) return false;
-                if (listing.price > state.priceMax) return false;
-                if (listing.sqft < state.sqftMin) return false;
-                if (listing.sqft > state.sqftMax) return false;
-                ...amenities check...
-                return true;
-            });
-        }
+        location        – location or city name, partial match
+        min_rent        – minimum monthly rent
+        max_rent        – maximum monthly rent
+        bedrooms        – exact bedroom value ('1bed', '2bed', '3bed', '4bed')
+        min_beds        – minimum bedroom count as int (1, 2, 3, 4)
+        bathrooms       – exact bathroom value ('1bath', '2bath', '3bath')
+        min_baths       – minimum bathroom count as int (1, 2, 3)
+        room_type       – exact room type ('private', 'shared', 'entire')
+        amenities       – comma-separated amenity names (?amenities=parking,gym)
+        sqft_min        – minimum square feet
+        sqft_max        – maximum square feet
+        search          – text search across title / description / location / city
+        uni_lat         – university latitude  ┐ all three required for
+        uni_lng         – university longitude ┘ distance filtering
+        max_distance_mi – max distance from campus in miles
+
+    Note on bedrooms / bathrooms:
+        Pass `bedrooms` for an exact match (e.g. ?bedrooms=2bed).
+        Pass `min_beds` for a minimum threshold (e.g. ?min_beds=2).
+        If both are sent, exact match takes priority and min_beds is ignored.
+        Same rule applies to `bathrooms` vs `min_baths`.
 
     Returns:
         A (possibly filtered) queryset — or a plain list when distance filtering
         is active (distance cannot be computed inside the DB without PostGIS).
     """
-    # ── Property type ─────────────────────────────────────────────────────────
-    room_type = params.get('type')
-    if room_type:
-        queryset = queryset.filter(room_type__iexact=room_type)
+    # ── Location (searches both location and city fields) ──────────────────────
+    location = params.get('location')
+    if location:
+        queryset = queryset.filter(
+            Q(location__icontains=location) | Q(city__icontains=location)
+        )
 
-    # ── Price range ───────────────────────────────────────────────────────────
-    price_min = params.get('price_min')
-    if price_min:
+    # ── Price range ────────────────────────────────────────────────────────────
+    min_rent = params.get('min_rent')
+    if min_rent:
         try:
-            queryset = queryset.filter(monthly_rent__gte=float(price_min))
+            queryset = queryset.filter(monthly_rent__gte=float(min_rent))
         except ValueError:
             pass
 
-    price_max = params.get('price_max')
-    if price_max:
+    max_rent = params.get('max_rent')
+    if max_rent:
         try:
-            queryset = queryset.filter(monthly_rent__lte=float(price_max))
+            queryset = queryset.filter(monthly_rent__lte=float(max_rent))
         except ValueError:
             pass
 
-    # ── Square feet ───────────────────────────────────────────────────────────
+    # ── Square feet ────────────────────────────────────────────────────────────
     sqft_min = params.get('sqft_min')
     if sqft_min:
         try:
@@ -201,57 +127,69 @@ def apply_listing_filters(queryset, params: dict):
         except ValueError:
             pass
 
-    # ── City / zip ────────────────────────────────────────────────────────────
-    city = params.get('city')
-    if city:
-        queryset = queryset.filter(city__icontains=city)
+    # ── Room type ──────────────────────────────────────────────────────────────
+    room_type = params.get('room_type')
+    if room_type:
+        queryset = queryset.filter(room_type__iexact=room_type)
 
-    zip_code = params.get('zip')
-    if zip_code:
-        queryset = queryset.filter(zip_code=zip_code)
+    # ── Amenities (comma-separated string in DB, e.g. "parking,gym,pool") ──────
+    # Frontend sends as a single comma-separated param: ?amenities=parking,gym
+    amenities_raw = params.get('amenities')
+    if amenities_raw:
+        for amenity in [a.strip() for a in amenities_raw.split(',') if a.strip()]:
+            queryset = queryset.filter(amenities__icontains=amenity)
 
-    # ── Amenities (comma-separated string in DB) ──────────────────────────────
-    # Supports repeated param: ?amenity=WiFi&amenity=Pool
-    get_list = getattr(params, 'getlist', None)
-    if get_list:
-        amenities = get_list('amenity')
+    # ── Bedrooms (DB choices: '1bed', '2bed', '3bed', '4bed') ─────────────────
+    # Exact match takes priority over the min_beds threshold.
+    bedrooms = params.get('bedrooms')
+    if bedrooms:
+        queryset = queryset.filter(bedrooms=bedrooms)
     else:
-        val = params.get('amenity')
-        amenities = [val] if val else []
-    for amenity in amenities:
-        queryset = queryset.filter(amenities__icontains=amenity)
+        min_beds_raw = params.get('min_beds')
+        if min_beds_raw:
+            try:
+                min_beds = int(min_beds_raw)
+                # Ladder matches the model choices in ascending order.
+                bed_ladder = ['1bed', '2bed', '3bed', '4bed']
+                # Slice off every value that falls below the minimum.
+                beds_to_exclude = bed_ladder[:min_beds - 1]
+                if beds_to_exclude:
+                    queryset = queryset.exclude(bedrooms__in=beds_to_exclude)
+            except ValueError:
+                pass
 
-    # ── Bedrooms (CharField in DB: 'Studio', '1', '2', '3', '4+') ────────────
-    # We cannot do numeric >= on a CharField, so we exclude lower values.
-    min_beds_raw = params.get('min_beds')
-    if min_beds_raw:
-        try:
-            min_beds = int(min_beds_raw)
-            if min_beds >= 1:
-                queryset = queryset.exclude(bedrooms__iexact='Studio')
-            # Exclude '1', '2', etc. that are below the minimum
-            beds_to_exclude = [str(i) for i in range(1, min_beds)]
-            if beds_to_exclude:
-                queryset = queryset.exclude(bedrooms__in=beds_to_exclude)
-        except ValueError:
-            pass
+    # ── Bathrooms (DB choices: '1bath', '2bath', '3bath') ─────────────────────
+    # Exact match takes priority over the min_baths threshold.
+    bathrooms = params.get('bathrooms')
+    if bathrooms:
+        queryset = queryset.filter(bathrooms=bathrooms)
+    else:
+        min_baths_raw = params.get('min_baths')
+        if min_baths_raw:
+            try:
+                min_baths = int(min_baths_raw)
+                # Ladder matches the model choices in ascending order.
+                bath_ladder = ['1bath', '2bath', '3bath']
+                # Slice off every value that falls below the minimum.
+                baths_to_exclude = bath_ladder[:min_baths - 1]
+                if baths_to_exclude:
+                    queryset = queryset.exclude(bathrooms__in=baths_to_exclude)
+            except ValueError:
+                pass
 
-    # ── Bathrooms (CharField in DB: '1', '1.5', '2', '2.5', '3') ────────────
-    min_baths_raw = params.get('min_baths')
-    if min_baths_raw:
-        try:
-            min_baths = float(min_baths_raw)
-            # Known bathroom values in ascending order
-            bath_ladder = ['1', '1.5', '2', '2.5', '3']
-            baths_to_exclude = [b for b in bath_ladder if float(b) < min_baths]
-            if baths_to_exclude:
-                queryset = queryset.exclude(bathrooms__in=baths_to_exclude)
-        except ValueError:
-            pass
+    # ── General text search (title / description / location / city) ────────────
+    search = params.get('search')
+    if search:
+        queryset = queryset.filter(
+            Q(title__icontains=search)
+            | Q(description__icontains=search)
+            | Q(location__icontains=search)
+            | Q(city__icontains=search)
+        )
 
-    # ── Distance filter (requires in-Python post-processing) ─────────────────
-    # Django ORM cannot compute haversine distance without PostGIS.
-    # So we materialise the queryset and filter in Python.
+    # ── Distance filter (Python post-processing — no PostGIS required) ─────────
+    # Django ORM cannot compute haversine distance without PostGIS, so we
+    # materialise the queryset and filter the results in Python.
     uni_lat = params.get('uni_lat')
     uni_lng = params.get('uni_lng')
     max_dist = params.get('max_distance_mi')

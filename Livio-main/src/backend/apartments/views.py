@@ -21,7 +21,6 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from django.shortcuts import get_object_or_404
-from django.db.models import Q
 
 from .models import ApartmentPost, FavoriteApartment, University
 from .serializers import (
@@ -30,7 +29,7 @@ from .serializers import (
     FavoriteApartmentSerializer,
     UniversitySerializer,
 )
-from decimal import Decimal
+from .utils import apply_listing_filters
 import boto3
 import os
 from dotenv import load_dotenv
@@ -54,16 +53,24 @@ class ApartmentListAPI(APIView):
     """
     GET  - List all active apartments with filtering
     POST - Create new apartment listing
-    
-    Query Parameters for GET:
-        - location: Filter by location/city
-        - min_rent: Minimum rent
-        - max_rent: Maximum rent
-        - bedrooms: Bedroom count (1bed, 2bed, etc.)
-        - bathrooms: Bathroom count
-        - room_type: private, shared, entire
-        - amenities: Comma-separated amenities
-        - search: General search term
+
+    Filtering is delegated to utils.apply_listing_filters.
+    Supported GET query parameters:
+        location        – partial match on location or city
+        min_rent        – minimum monthly rent
+        max_rent        – maximum monthly rent
+        bedrooms        – exact bedroom value ('1bed', '2bed', '3bed', '4bed')
+        min_beds        – minimum bedroom count as int (1, 2, 3, 4)
+        bathrooms       – exact bathroom value ('1bath', '2bath', '3bath')
+        min_baths       – minimum bathroom count as int (1, 2, 3)
+        room_type       – 'private', 'shared', or 'entire'
+        amenities       – comma-separated amenity names (?amenities=parking,gym)
+        sqft_min        – minimum square feet
+        sqft_max        – maximum square feet
+        search          – text search across title / description / location / city
+        uni_lat         – university latitude  ┐ all three required for
+        uni_lng         – university longitude ┘ distance filtering
+        max_distance_mi – max miles from campus
     """
     
     def get_permissions(self):
@@ -74,66 +81,14 @@ class ApartmentListAPI(APIView):
     
     def get(self, request):
         """List apartments with optional filtering."""
-        
-        # Start with all active apartments
         apartments = ApartmentPost.objects.filter(is_active=True)
-        
-        # Location filter
-        location = request.query_params.get('location')
-        if location:
-            apartments = apartments.filter(
-                Q(location__icontains=location) |
-                Q(city__icontains=location)
-            )
-        
-        # Price filters
-        min_rent = request.query_params.get('min_rent')
-        if min_rent:
-            apartments = apartments.filter(monthly_rent__gte=Decimal(min_rent))
-        
-        max_rent = request.query_params.get('max_rent')
-        if max_rent:
-            apartments = apartments.filter(monthly_rent__lte=Decimal(max_rent))
-        
-        # Bedroom filter
-        bedrooms = request.query_params.get('bedrooms')
-        if bedrooms:
-            apartments = apartments.filter(bedrooms=bedrooms)
-        
-        # Bathroom filter
-        bathrooms = request.query_params.get('bathrooms')
-        if bathrooms:
-            apartments = apartments.filter(bathrooms=bathrooms)
-        
-        # Room type filter
-        room_type = request.query_params.get('room_type')
-        if room_type:
-            apartments = apartments.filter(room_type=room_type)
-        
-        # Amenities filter (must have ALL specified amenities)
-        amenities = request.query_params.get('amenities')
-        if amenities:
-            amenity_list = [a.strip() for a in amenities.split(',')]
-            for amenity in amenity_list:
-                apartments = apartments.filter(amenities__icontains=amenity)
-        
-        # General search
-        search = request.query_params.get('search')
-        if search:
-            apartments = apartments.filter(
-                Q(title__icontains=search) |
-                Q(description__icontains=search) |
-                Q(location__icontains=search) |
-                Q(city__icontains=search)
-            )
-        
-        # Serialize
+        apartments = apply_listing_filters(apartments, request.query_params)
+
         serializer = ApartmentPostSerializer(
-            apartments, 
+            apartments,
             many=True,
             context={'request': request}
         )
-        
         return Response(serializer.data, status=status.HTTP_200_OK)
     
     def post(self, request):
