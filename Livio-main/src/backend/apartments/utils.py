@@ -212,9 +212,12 @@ def apply_listing_filters(queryset, params: dict):
 
     # ── Amenities (comma-separated string in DB) ──────────────────────────────
     # Supports repeated param: ?amenity=WiFi&amenity=Pool
-    amenities = params.getlist('amenity') if hasattr(params, 'getlist') else (
-        [params['amenity']] if params.get('amenity') else []
-    )
+    get_list = getattr(params, 'getlist', None)
+    if get_list:
+        amenities = get_list('amenity')
+    else:
+        val = params.get('amenity')
+        amenities = [val] if val else []
     for amenity in amenities:
         queryset = queryset.filter(amenities__icontains=amenity)
 
