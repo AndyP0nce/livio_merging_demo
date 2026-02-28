@@ -13,6 +13,7 @@ Original JS locations:
 """
 
 import math
+from decimal import Decimal
 from django.db.models import Q
 
 
@@ -101,15 +102,15 @@ def apply_listing_filters(queryset, params: dict):
     min_rent = params.get('min_rent')
     if min_rent:
         try:
-            queryset = queryset.filter(monthly_rent__gte=float(min_rent))
-        except ValueError:
+            queryset = queryset.filter(monthly_rent__gte=Decimal(min_rent))
+        except Exception:
             pass
 
     max_rent = params.get('max_rent')
     if max_rent:
         try:
-            queryset = queryset.filter(monthly_rent__lte=float(max_rent))
-        except ValueError:
+            queryset = queryset.filter(monthly_rent__lte=Decimal(max_rent))
+        except Exception:
             pass
 
     # ── Square feet ────────────────────────────────────────────────────────────
