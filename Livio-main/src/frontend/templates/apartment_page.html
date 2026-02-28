@@ -4,12 +4,12 @@
 {% block page_identifier %}apartments{% endblock %}
 
 {% block styles %}
-<link rel="stylesheet" href="{% static 'css/apartment_styles.css' %}">
-<link rel="stylesheet" href="{% static 'css/apartment_map.css' %}">
-<link rel="stylesheet" href="{% static 'css/apartment_cards.css' %}">
-<link rel="stylesheet" href="{% static 'css/apartment_filters.css' %}">
-<link rel="stylesheet" href="{% static 'css/apartment_detail_modal.css' %}">
-<link rel="stylesheet" href="{% static 'css/apartment_create_modal.css' %}">
+<link rel="stylesheet" href="{% static 'css/apartments/apartment_styles.css' %}">
+<link rel="stylesheet" href="{% static 'css/apartments/apartment_map.css' %}">
+<link rel="stylesheet" href="{% static 'css/apartments/apartment_cards.css' %}">
+<link rel="stylesheet" href="{% static 'css/apartments/apartment_filters.css' %}">
+<link rel="stylesheet" href="{% static 'css/apartments/apartment_detail_modal.css' %}">
+<link rel="stylesheet" href="{% static 'css/apartments/apartment_create_modal.css' %}">
 {% endblock %}
 
 {% block content %}
@@ -74,16 +74,16 @@
   apartment_event_bus.js – pub/sub EventBus used by all modules
   (remaining modules depend on both of the above)
 -->
-<script src="{% static 'js/apartment_utils.js' %}"></script>
-<script src="{% static 'js/apartment_event_bus.js' %}"></script>
-<script src="{% static 'js/apartment_map_manager.js' %}"></script>
-<script src="{% static 'js/apartment_cards_renderer.js' %}"></script>
-<script src="{% static 'js/apartment_filter_manager.js' %}"></script>
-<script src="{% static 'js/apartment_listing_detail.js' %}"></script>
-<script src="{% static 'js/apartment_create_modal.js' %}"></script>
+<script src="{% static 'js/apartments/apartment_utils.js' %}"></script>
+<script src="{% static 'js/apartments/apartment_event_bus.js' %}"></script>
+<script src="{% static 'js/apartments/apartment_map_manager.js' %}"></script>
+<script src="{% static 'js/apartments/apartment_cards_renderer.js' %}"></script>
+<script src="{% static 'js/apartments/apartment_filter_manager.js' %}"></script>
+<script src="{% static 'js/apartments/apartment_listing_detail.js' %}"></script>
+<script src="{% static 'js/apartments/apartment_create_modal.js' %}"></script>
 <!-- Favorites management + toast notifications -->
 <script src="{% static 'js/api_integration.js' %}"></script>
 <!-- Entry point: fetches data, wires all modules together -->
-<script src="{% static 'js/apartment_script.js' %}"></script>
+<script src="{% static 'js/apartments/apartment_script.js' %}"></script>
 
 {% endblock %}
